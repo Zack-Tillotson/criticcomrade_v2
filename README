@@ -1,0 +1,3 @@
+CriticComrade v2 - Zack Tillotson
+
+This is intended to recreate the basic functionality of CriticComrade (see my other repo), it will get data about movies, critics, and reviews. A user who comes in an enters their own review information can then be matched with like minded critics and given personalized suggestions.
