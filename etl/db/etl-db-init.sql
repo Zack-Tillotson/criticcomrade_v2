@@ -5,7 +5,6 @@
 -- data: Attribute name, value pair table for the queue objects
 create table rt_queue (
         rt_id integer not null,
-        title char(255) not null,
         link text not null,
         last_queried date,
         last_found date,
