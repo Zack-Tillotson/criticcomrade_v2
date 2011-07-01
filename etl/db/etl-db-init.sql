@@ -28,7 +28,6 @@ create table data (
 );
 
 create table rt_activity (
-	date activity_time not null default value now(),
-	link text not null,
-	action text
+	ts timestamp not null,
+	link text not null
 );

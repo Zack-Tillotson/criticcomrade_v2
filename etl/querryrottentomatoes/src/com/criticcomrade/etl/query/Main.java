@@ -13,20 +13,45 @@ public class Main {
     public static void main(String[] args) throws JsonSyntaxException, IOException {
 	
 	for (MovieShort ms : RottenTomatoesApi.getBoxOfficeMovies()) {
-	    etlMovie(ms, 1000 * 60 * 60 * 24);
+	    etlMovie(ms.id, 1000 * 60 * 60 * 24);
 	}
+	
+	for (MovieShort ms : RottenTomatoesApi.getInTheatersMovies()) {
+	    etlMovie(ms.id, 1000 * 60 * 60 * 24);
+	}
+	
+	for (MovieShort ms : RottenTomatoesApi.getOpeningMovies()) {
+	    etlMovie(ms.id, 1000 * 60 * 60 * 24);
+	}
+	
+	for (MovieShort ms : RottenTomatoesApi.getUpcomingMovies()) {
+	    etlMovie(ms.id, 1000 * 60 * 60 * 24);
+	}
+	
     }
     
-    public static void etlMovie(MovieShort ms, long staleTimePeriod) throws IOException {
+    public static void etlMovie(String id, long staleTimePeriod) throws IOException {
 	
-	if (((new Date()).getTime() - RtQueueDao.getLastQueryDate(ms.id).getTime()) > staleTimePeriod) {
+	RtQueueDao.ensureMovieIsInQueue(id);
+	
+	Date nowDate = new Date();
+	
+	if ((nowDate.getTime() - RtQueueDao.getLastQueryDate(id).getTime()) > staleTimePeriod) {
 	    
 	    String result;
 	    try {
-		RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(ms.id, ms.links.self);
-		DataItemDao.putDataItem(mq);
+		
+		RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id);
+		RtQueueDao.updateQueryDate(id, nowDate);
+		
+		boolean changed = DataItemDao.putDataItem(mq);
+		if (changed) {
+		    RtQueueDao.updateFoundDate(id, nowDate);
+		}
+		
 		printAttrsTree("", mq);
 		result = "success";
+		
 	    } catch (JsonSyntaxException e) {
 		e.printStackTrace();
 		result = e.toString();
@@ -50,4 +75,5 @@ public class Main {
 	    printAttrsTree(tab + "\t", dataItem);
 	}
     }
+    
 }

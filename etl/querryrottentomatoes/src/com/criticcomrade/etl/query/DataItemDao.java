@@ -62,24 +62,30 @@ public class DataItemDao {
 	
     }
     
-    public static int putDataItem(DataItem item) {
+    public static boolean putDataItem(DataItem item) {
+	
+	boolean changed = false;
 	
 	// Put all subitems first
 	for (DataItem subitem : item.getSubItems()) {
-	    putDataItem(subitem);
+	    if (putDataItem(subitem)) {
+		changed = true;
+	    }
 	}
 	
 	// Put the item
-	int itemId = writeAttributes(item);
+	if (writeAttributes(item)) {
+	    changed = true;
+	}
 	
-	return itemId;
+	return changed;
 	
     }
     
-    private static int writeAttributes(DataItem item) {
+    private static boolean writeAttributes(DataItem item) {
 	
 	// First ensure the item is backed
-	ensureItemIsBacked(item);
+	boolean changed = ensureItemIsBacked(item);
 	
 	// Get the subitems link attributes (all should be backed)
 	Collection<Attribute> attrs = new ArrayList<Attribute>();
@@ -91,11 +97,11 @@ public class DataItemDao {
 	attrs.addAll(item.getAttributes());
 	putItemAttributes(item.getId(), attrs);
 	
-	return item.getId();
+	return changed;
 	
     }
     
-    private static void ensureItemIsBacked(DataItem item) {
+    private static boolean ensureItemIsBacked(DataItem item) {
 	
 	// Look for data attributes by data type
 	Collection<Attribute> keys = new ArrayList<Attribute>();
@@ -105,6 +111,7 @@ public class DataItemDao {
 	    }
 	}
 	
+	// Find which item we're looking at
 	int id = findItemByAttributes(item.getType(), keys);
 	
 	if (id == 0) {
@@ -112,6 +119,23 @@ public class DataItemDao {
 	}
 	
 	item.setId(id);
+	
+	// See if the db attributes are different from the current ones
+	boolean changed = false;
+	
+	Collection<Attribute> dbAttrs = getItemAttrs(item.getId());
+	for (Attribute dbAttr : dbAttrs) {
+	    if (!item.getAttributes().contains(dbAttr)) {
+		changed = true;
+	    }
+	}
+	for (Attribute attr : item.getAttributes()) {
+	    if (!dbAttrs.contains(attr)) {
+		changed = true;
+	    }
+	}
+	
+	return changed;
 	
     }
     
@@ -151,6 +175,33 @@ public class DataItemDao {
 	    statement.close();
 	    
 	    return id;
+	    
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
+	
+    }
+    
+    private static Collection<Attribute> getItemAttrs(int id) {
+	
+	try {
+	    
+	    String sql = "select attr_name, attr_value from data where item_id = ?";
+	    
+	    PreparedStatement statement = DaoUtility.getConnection().prepareStatement(sql);
+	    statement.setInt(1, id);
+	    
+	    Collection<Attribute> attrs = new ArrayList<Attribute>();
+	    
+	    ResultSet res = statement.executeQuery();
+	    while (res.next()) {
+		attrs.add(new Attribute(res.getString(1), res.getString(2)));
+	    }
+	    
+	    res.close();
+	    statement.close();
+	    
+	    return attrs;
 	    
 	} catch (SQLException e) {
 	    throw new RuntimeException(e);

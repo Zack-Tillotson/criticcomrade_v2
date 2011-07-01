@@ -11,24 +11,18 @@ import com.google.gson.JsonSyntaxException;
 public class RottenTomatoesMovieQuery extends DataItem {
     
     private final String rtid;
-    private final String link;
     private final Movie movie;
     private final List<Review> reviews;
     
-    public RottenTomatoesMovieQuery(String rtid, String link) throws JsonSyntaxException, IOException {
+    public RottenTomatoesMovieQuery(String rtid) throws JsonSyntaxException, IOException {
 	super(AttributeConstants.MOVIE);
 	this.rtid = rtid;
-	this.link = link;
 	movie = RottenTomatoesApi.getMovie(rtid);
 	reviews = RottenTomatoesApi.getReviews(movie);
     }
     
     public String getRtId() {
 	return rtid;
-    }
-    
-    public String getLink() {
-	return link;
     }
     
     public Movie getMovie() {
