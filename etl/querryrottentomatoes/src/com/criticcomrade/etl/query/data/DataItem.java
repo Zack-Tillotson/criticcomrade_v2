@@ -7,9 +7,24 @@ import com.criticcomrade.etl.query.AttributeConstants;
 public abstract class DataItem {
     
     protected String type;
+    protected int id;
+    private Collection<DataItem> subItems;
     
     public DataItem(String type) {
 	this.type = type;
+	subItems = null;
+    }
+    
+    public int getId() {
+	return id;
+    }
+    
+    public void setId(int id) {
+	this.id = id;
+    }
+    
+    public String getType() {
+	return type;
     }
     
     public Collection<Attribute> getAttributes() {
@@ -21,6 +36,13 @@ public abstract class DataItem {
     
     protected abstract Collection<Attribute> getDirectAttributes();
     
-    public abstract Collection<DataItem> getSubItems();
+    public Collection<DataItem> getSubItems() {
+	if (subItems == null) {
+	    subItems = buildSubItems();
+	}
+	return subItems;
+    }
+    
+    protected abstract Collection<DataItem> buildSubItems();
     
 }

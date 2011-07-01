@@ -6,5 +6,6 @@
 	<classpathentry kind="lib" path="C:/Users/zack.tillotson/CriticComrade/etl/querryrottentomatoes/lib/gson-1.7.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/zack.tillotson/CriticComrade/etl/querryrottentomatoes/lib/gson-1.7.1-javadoc.jar"/>
 	<classpathentry kind="lib" path="C:/Users/zack.tillotson/CriticComrade/etl/querryrottentomatoes/lib/gson-1.7.1-sources.jar"/>
+	<classpathentry kind="lib" path="C:/Users/zack.tillotson/CriticComrade/etl/querryrottentomatoes/lib/mysql-connector-java-5.1.16-bin.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -3,26 +3,28 @@ package com.criticcomrade.etl.query;
 import java.io.IOException;
 import java.util.*;
 
-import com.criticcomrade.api.data.Movie;
+import com.criticcomrade.api.data.*;
 import com.criticcomrade.api.main.RottenTomatoesApi;
 import com.criticcomrade.etl.query.data.*;
 import com.google.gson.JsonSyntaxException;
 
 public class RottenTomatoesMovieQuery extends DataItem {
     
-    private final String id;
+    private final String rtid;
     private final String link;
     private final Movie movie;
+    private final List<Review> reviews;
     
-    public RottenTomatoesMovieQuery(String id, String link) throws JsonSyntaxException, IOException {
+    public RottenTomatoesMovieQuery(String rtid, String link) throws JsonSyntaxException, IOException {
 	super(AttributeConstants.MOVIE);
-	this.id = id;
+	this.rtid = rtid;
 	this.link = link;
-	movie = RottenTomatoesApi.getMovie(id);
+	movie = RottenTomatoesApi.getMovie(rtid);
+	reviews = RottenTomatoesApi.getReviews(movie);
     }
     
-    public String getId() {
-	return id;
+    public String getRtId() {
+	return rtid;
     }
     
     public String getLink() {
@@ -45,6 +47,11 @@ public class RottenTomatoesMovieQuery extends DataItem {
 	attrs.add(new Attribute(AttributeConstants.MOVIE_MPAA_RATING, movie.mpaa_rating));
 	attrs.add(new Attribute(AttributeConstants.MOVIE_RUNTIME, movie.runtime));
 	attrs.add(new Attribute(AttributeConstants.MOVIE_SYNOPSIS, movie.synopsis));
+	if ((movie.genres != null)) {
+	    for (String genre : movie.genres) {
+		attrs.add(new Attribute(AttributeConstants.MOVIE_GENRE, genre));
+	    }
+	}
 	if (movie.alternate_ids != null) {
 	    attrs.add(new Attribute(AttributeConstants.MOVIE_IMDB_ID, movie.alternate_ids.imdb));
 	}
@@ -54,7 +61,7 @@ public class RottenTomatoesMovieQuery extends DataItem {
     }
     
     @Override
-    public Collection<DataItem> getSubItems() {
+    protected Collection<DataItem> buildSubItems() {
 	
 	List<DataItem> dataItems = new ArrayList<DataItem>();
 	
@@ -72,7 +79,7 @@ public class RottenTomatoesMovieQuery extends DataItem {
 	    }
 	    
 	    @Override
-	    public Collection<DataItem> getSubItems() {
+	    protected Collection<DataItem> buildSubItems() {
 		return new ArrayList<DataItem>();
 	    }
 	    
@@ -94,17 +101,95 @@ public class RottenTomatoesMovieQuery extends DataItem {
 	    }
 	    
 	    @Override
-	    public Collection<DataItem> getSubItems() {
+	    protected Collection<DataItem> buildSubItems() {
 		return new ArrayList<DataItem>();
 	    }
 	    
 	});
 	
-	// TODO Cast
-	// TODO Directors
+	// Cast
+	if (movie.abridged_cast != null) {
+	    for (final MoviePerson person : movie.abridged_cast) {
+		dataItems.add(new DataItem(AttributeConstants.CAST) {
+		    
+		    @Override
+		    public Collection<Attribute> getDirectAttributes() {
+			List<Attribute> attrs = new ArrayList<Attribute>();
+			attrs.add(new Attribute(AttributeConstants.CAST_NAME, person.name));
+			return attrs;
+		    }
+		    
+		    @Override
+		    protected Collection<DataItem> buildSubItems() {
+			return new ArrayList<DataItem>();
+		    }
+		    
+		});
+	    }
+	}
+	
+	// Directors
+	if (movie.abridged_directors != null) {
+	    for (final MoviePerson person : movie.abridged_directors) {
+		dataItems.add(new DataItem(AttributeConstants.DIRECTOR) {
+		    
+		    @Override
+		    public Collection<Attribute> getDirectAttributes() {
+			List<Attribute> attrs = new ArrayList<Attribute>();
+			attrs.add(new Attribute(AttributeConstants.DIRECTOR_NAME, person.name));
+			return attrs;
+		    }
+		    
+		    @Override
+		    protected Collection<DataItem> buildSubItems() {
+			return new ArrayList<DataItem>();
+		    }
+		    
+		});
+	    }
+	}
+	
+	// Reviews
+	for (final Review review : reviews) {
+	    
+	    dataItems.add(new DataItem(AttributeConstants.REVIEW) {
+		
+		@Override
+		public Collection<Attribute> getDirectAttributes() {
+		    List<Attribute> attrs = new ArrayList<Attribute>();
+		    attrs.add(new Attribute(AttributeConstants.REVIEW_DATE, review.date));
+		    attrs.add(new Attribute(AttributeConstants.REVIEW_ORIGINAL_SCORE, review.original_score));
+		    attrs.add(new Attribute(AttributeConstants.REVIEW_QUOTE, review.quote));
+		    attrs.add(new Attribute(AttributeConstants.REVIEW_LINK, review.links.review));
+		    return attrs;
+		}
+		
+		@Override
+		protected Collection<DataItem> buildSubItems() {
+		    ArrayList<DataItem> items = new ArrayList<DataItem>();
+		    items.add(new DataItem(AttributeConstants.REVIEWER) {
+			
+			@Override
+			protected Collection<Attribute> getDirectAttributes() {
+			    List<Attribute> attrs = new ArrayList<Attribute>();
+			    attrs.add(new Attribute(AttributeConstants.REVIEWER_NAME, review.critic));
+			    attrs.add(new Attribute(AttributeConstants.REVIEWER_PUBLICATION, review.publication));
+			    return attrs;
+			}
+			
+			@Override
+			protected Collection<DataItem> buildSubItems() {
+			    return new ArrayList<DataItem>();
+			}
+		    });
+		    return items;
+		}
+		
+	    });
+	    
+	}
 	
 	return dataItems;
 	
     }
-    
 }

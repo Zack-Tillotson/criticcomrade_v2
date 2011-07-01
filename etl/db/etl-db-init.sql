@@ -26,3 +26,9 @@ create table data (
         --
         foreign key (item_id) references item_queue(item_id)
 );
+
+create table rt_activity (
+	date activity_time not null default value now(),
+	link text not null,
+	action text
+);
