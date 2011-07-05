@@ -17,19 +17,20 @@ public class Main {
     
     public static void main(String[] args) throws JsonSyntaxException, IOException {
 	
-	for (MovieShort ms : RottenTomatoesApi.getBoxOfficeMovies()) {
-	    etlMovie(ms.id, STALE_TIME_PERIOD);
+	RottenTomatoesApi api = new RottenTomatoesApi();
+	for (MovieShort ms : api.getBoxOfficeMovies()) {
+	    etlMovie(ms.id, STALE_TIME_PERIOD, api);
 	}
 	
-//	for (MovieShort ms : RottenTomatoesApi.getInTheatersMovies()) {
+//	for (MovieShort ms : api()) {
 //	    etlMovie(ms.id, STALE_TIME_PERIOD);
 //	}
 //	
-//	for (MovieShort ms : RottenTomatoesApi.getOpeningMovies()) {
+//	for (MovieShort ms : api()) {
 //	    etlMovie(ms.id, STALE_TIME_PERIOD);
 //	}
 //	
-//	for (MovieShort ms : RottenTomatoesApi.getUpcomingMovies()) {
+//	for (MovieShort ms : api()) {
 //	    etlMovie(ms.id, STALE_TIME_PERIOD);
 //	}
 //	
@@ -40,7 +41,7 @@ public class Main {
 	
     }
     
-    public static void etlMovie(String id, long staleTimePeriod) throws IOException {
+    public static void etlMovie(String id, long staleTimePeriod, RottenTomatoesApi api) throws IOException {
 	
 	long startTime = System.currentTimeMillis();
 	int apiCallCount = 0;
@@ -54,15 +55,14 @@ public class Main {
 	    
 	    try {
 		
-		RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id);
+		RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id, api);
+		apiCallCount = mq.getApiCallCount();
 		RtQueueDao.updateQueryDate(id, nowDate);
 		
 		boolean changed = DataItemDao.putDataItem(mq);
 		if (changed) {
 		    RtQueueDao.updateFoundDate(id, nowDate);
 		}
-		
-		apiCallCount = mq.getApiCallCount();
 		
 		result = "Updated";
 		

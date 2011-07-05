@@ -14,11 +14,11 @@ public class RottenTomatoesMovieQuery extends DataItem {
     private final Movie movie;
     private final List<Review> reviews;
     
-    public RottenTomatoesMovieQuery(String rtid) throws JsonSyntaxException, IOException {
+    public RottenTomatoesMovieQuery(String rtid, RottenTomatoesApi api) throws JsonSyntaxException, IOException {
 	super(AttributeConstants.MOVIE);
 	this.rtid = rtid;
-	movie = RottenTomatoesApi.getMovie(rtid);
-	reviews = RottenTomatoesApi.getReviews(movie);
+	movie = api.getMovie(rtid);
+	reviews = api.getReviews(movie);
     }
     
     public String getRtId() {
