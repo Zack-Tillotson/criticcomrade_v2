@@ -1,6 +1,7 @@
 package com.criticcomrade.etl.query;
 
 import java.io.IOException;
+import java.sql.*;
 import java.util.Date;
 
 import com.criticcomrade.api.data.MovieShort;
@@ -15,7 +16,11 @@ public class Main {
     private static final int ACTIVE_TIME_PERIOD_START = 1000 * 60 * 60 * 24 * 7; // 7 Day
     private static final int ACTIVE_TIME_PERIOD_END = 1000 * 60 * 60 * 24; // 1 Day
     
-    public static void main(String[] args) throws JsonSyntaxException, IOException {
+    private static Connection conn;
+    
+    public static void main(String[] args) throws JsonSyntaxException, IOException, SQLException {
+	
+	conn = DaoUtility.getConnection();
 	
 	RottenTomatoesApi api = new RottenTomatoesApi();
 	for (MovieShort ms : api.getBoxOfficeMovies()) {
@@ -46,22 +51,25 @@ public class Main {
 	long startTime = System.currentTimeMillis();
 	int apiCallCount = 0;
 	
-	RtQueueDao.ensureMovieIsInQueue(id);
+	RtQueueDao rtQueueDao = new RtQueueDao(conn);
+	
+	rtQueueDao.ensureMovieIsInQueue(id);
 	
 	Date nowDate = new Date();
 	
 	String result;
-	if ((nowDate.getTime() - RtQueueDao.getLastQueryDate(id).getTime()) > staleTimePeriod) {
+	if ((nowDate.getTime() - rtQueueDao.getLastQueryDate(id).getTime()) > staleTimePeriod) {
 	    
 	    try {
 		
 		RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id, api);
 		apiCallCount = mq.getApiCallCount();
-		RtQueueDao.updateQueryDate(id, nowDate);
 		
-		boolean changed = DataItemDao.putDataItem(mq);
+		rtQueueDao.updateQueryDate(id, nowDate);
+		
+		boolean changed = (new DataItemDao(conn)).putDataItem(mq);
 		if (changed) {
-		    RtQueueDao.updateFoundDate(id, nowDate);
+		    rtQueueDao.updateFoundDate(id, nowDate);
 		}
 		
 		result = "Updated";
@@ -77,7 +85,7 @@ public class Main {
 	
 	long endTime = System.currentTimeMillis();
 	
-	RtActivityDao.addApiCallToLog(id, result, apiCallCount, (int) ((endTime - startTime) / 1000));
+	(new RtActivityDao(conn)).addApiCallToLog(id, result, apiCallCount, (int) ((endTime - startTime) / 1000));
 	System.out.println(id + " " + result);
 	
     }
