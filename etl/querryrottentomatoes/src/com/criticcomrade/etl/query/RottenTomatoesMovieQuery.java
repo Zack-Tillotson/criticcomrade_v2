@@ -182,8 +182,19 @@ public class RottenTomatoesMovieQuery extends DataItem {
 	    });
 	    
 	}
-	
 	return dataItems;
+	
+    }
+    
+    /**
+     * Get the approximate number of api calls required to do this query. It will be 1 for the
+     * movie, then 1 for each page of reviews
+     * 
+     * @return The number of calls
+     */
+    public int getApiCallCount() {
+	
+	return 1 + reviews.size() / RottenTomatoesApi.PAGE_LIMIT + 1;
 	
     }
 }

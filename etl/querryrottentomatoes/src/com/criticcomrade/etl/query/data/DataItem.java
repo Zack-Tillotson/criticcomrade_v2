@@ -28,9 +28,18 @@ public abstract class DataItem {
     }
     
     public Collection<Attribute> getAttributes() {
+	
 	Collection<Attribute> attrs = new ArrayList<Attribute>();
 	attrs.add(new Attribute(AttributeConstants.TYPE, type));
 	attrs.addAll(getDirectAttributes());
+	
+	// Remove nulls
+	for (Iterator<Attribute> iter = attrs.iterator(); iter.hasNext();) {
+	    if (iter.next().value == null) {
+		iter.remove();
+	    }
+	}
+	
 	return attrs;
     }
     
@@ -40,6 +49,7 @@ public abstract class DataItem {
 	if (subItems == null) {
 	    subItems = buildSubItems();
 	}
+	
 	return subItems;
     }
     
