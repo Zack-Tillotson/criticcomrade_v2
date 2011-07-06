@@ -31,24 +31,23 @@ public class Main extends Thread {
 	}
 	
 	conn = DaoUtility.getConnection();
-	RottenTomatoesApi api = new RottenTomatoesApi();
 	
 	if (args[0].equals(CURRENT_LISTS)) {
 	    
-	    for (MovieShort ms : api.getBoxOfficeMovies()) {
-		doMovieEtl(ms.id, api);
+	    for (MovieShort ms : RottenTomatoesApi.getBoxOfficeMovies()) {
+		addMovieToQueue(ms.id);
 	    }
 	    
-	    for (MovieShort ms : api.getInTheatersMovies()) {
-		doMovieEtl(ms.id, api);
+	    for (MovieShort ms : RottenTomatoesApi.getInTheatersMovies()) {
+		addMovieToQueue(ms.id);
 	    }
 	    
-	    for (MovieShort ms : api.getOpeningMovies()) {
-		doMovieEtl(ms.id, api);
+	    for (MovieShort ms : RottenTomatoesApi.getOpeningMovies()) {
+		addMovieToQueue(ms.id);
 	    }
 	    
-	    for (MovieShort ms : api.getUpcomingMovies()) {
-		doMovieEtl(ms.id, api);
+	    for (MovieShort ms : RottenTomatoesApi.getUpcomingMovies()) {
+		addMovieToQueue(ms.id);
 	    }
 	    
 	} else if (args[0].equals(FROM_QUEUE)) {
@@ -61,7 +60,7 @@ public class Main extends Thread {
 		if (id == null) {
 		    sleep(1000 * 60 * 10);
 		} else {
-		    doMovieEtl(id, api);
+		    doMovieEtl(id);
 		}
 	    }
 	    
@@ -70,6 +69,14 @@ public class Main extends Thread {
 	    System.exit(1);
 	}
 	
+    }
+    
+    // Just add it to the queue to be picked up later
+    private static void addMovieToQueue(String id) {
+	RtQueueDao dao = new RtQueueDao(conn);
+	if (RtQueueDao.getMovieLock(id, dao)) {
+	    RtQueueDao.removeMovieLock(id, dao);
+	}
     }
     
     /**
@@ -121,7 +128,7 @@ public class Main extends Thread {
 	System.err.println("\t" + FROM_QUEUE + "\tETL any movies off of the queue which are \"active\"");
     }
     
-    public static void doMovieEtl(String id, RottenTomatoesApi api) throws IOException {
+    public static void doMovieEtl(String id) throws IOException {
 	
 	long startTime = System.currentTimeMillis();
 	int apiCallCount = 0;
@@ -139,7 +146,7 @@ public class Main extends Thread {
 		    
 		    try {
 			
-			RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id, api);
+			RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id);
 			apiCallCount = mq.getApiCallCount();
 			
 			boolean changed = (new DataItemDao(conn)).putDataItem(mq);
