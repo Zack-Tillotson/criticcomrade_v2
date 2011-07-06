@@ -12,6 +12,10 @@ import com.google.gson.JsonSyntaxException;
 
 public class Main {
     
+    private static final String PRINT_OPTIONS = "-?";
+    private static final String FROM_QUEUE = "--from-queue";
+    private static final String CURRENT_LISTS = "--from-current-lists";
+    
     private static final int STALE_TIME_PERIOD = 1000 * 60 * 60 * 24; // 1 Day
     private static final int ACTIVE_TIME_PERIOD_START = 1000 * 60 * 60 * 24 * 7; // 7 Day
     private static final int ACTIVE_TIME_PERIOD_END = 1000 * 60 * 60 * 24; // 1 Day
@@ -20,29 +24,51 @@ public class Main {
     
     public static void main(String[] args) throws JsonSyntaxException, IOException, SQLException {
 	
-	conn = DaoUtility.getConnection();
-	
-	RottenTomatoesApi api = new RottenTomatoesApi();
-	for (MovieShort ms : api.getBoxOfficeMovies()) {
-	    etlMovie(ms.id, STALE_TIME_PERIOD, api);
+	if (args.length != 1) {
+	    printOptions();
+	    System.exit(1);
 	}
 	
-//	for (MovieShort ms : api()) {
-//	    etlMovie(ms.id, STALE_TIME_PERIOD);
-//	}
-//	
-//	for (MovieShort ms : api()) {
-//	    etlMovie(ms.id, STALE_TIME_PERIOD);
-//	}
-//	
-//	for (MovieShort ms : api()) {
-//	    etlMovie(ms.id, STALE_TIME_PERIOD);
-//	}
-//	
-//	for (String id : RtQueueDao.getMoviesActiveWithinTimePeriod(new Date((new Date()).getTime() - ACTIVE_TIME_PERIOD_START),
-//	        new Date((new Date()).getTime() - ACTIVE_TIME_PERIOD_END))) {
-//	    etlMovie(id, STALE_TIME_PERIOD);
-//	}
+	conn = DaoUtility.getConnection();
+	RottenTomatoesApi api = new RottenTomatoesApi();
+	
+	if (args[0].equals(CURRENT_LISTS)) {
+	    
+	    for (MovieShort ms : api.getBoxOfficeMovies()) {
+		etlMovie(ms.id, STALE_TIME_PERIOD, api);
+	    }
+	    
+	    for (MovieShort ms : api.getInTheatersMovies()) {
+		etlMovie(ms.id, STALE_TIME_PERIOD, api);
+	    }
+	    
+	    for (MovieShort ms : api.getOpeningMovies()) {
+		etlMovie(ms.id, STALE_TIME_PERIOD, api);
+	    }
+	    
+	    for (MovieShort ms : api.getUpcomingMovies()) {
+		etlMovie(ms.id, STALE_TIME_PERIOD, api);
+	    }
+	    
+	} else if (args[0].equals(FROM_QUEUE)) {
+	    
+	    for (String id : (new RtQueueDao(conn)).getMoviesActiveWithinTimePeriod(new Date((new Date()).getTime() - ACTIVE_TIME_PERIOD_START),
+		    new Date((new Date()).getTime() - ACTIVE_TIME_PERIOD_END))) {
+		etlMovie(id, STALE_TIME_PERIOD, api);
+	    }
+	    
+	} else {
+	    printOptions();
+	    System.exit(1);
+	}
+	
+    }
+    
+    private static void printOptions() {
+	System.err.println("Usage: options");
+	System.err.println("\t" + PRINT_OPTIONS + "\tPrint these options");
+	System.err.println("\t" + CURRENT_LISTS + "\tETL the current box office, in theaters, opening, and upcoming movies from RottenTomatoes");
+	System.err.println("\t" + FROM_QUEUE + "\tETL any movies off of the queue which are \"active\"");
 	
     }
     
