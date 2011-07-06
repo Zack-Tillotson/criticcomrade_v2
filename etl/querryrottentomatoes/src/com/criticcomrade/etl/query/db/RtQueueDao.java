@@ -15,7 +15,7 @@ public class RtQueueDao extends EtlDao {
 	return dao.lockMovie(id);
     }
     
-    public static synchronized void removeMovieLock(String id, RtQueueDao dao) {
+    public void removeMovieLock(String id, RtQueueDao dao) {
 	dao.unlockMovie(id);
     }
     
