@@ -1,11 +1,11 @@
-package com.criticcomrade.etl.query;
+package com.criticcomrade.etl.query.data;
 
 import java.io.IOException;
 import java.util.*;
 
 import com.criticcomrade.api.data.*;
 import com.criticcomrade.api.main.RottenTomatoesApi;
-import com.criticcomrade.etl.query.data.*;
+import com.criticcomrade.etl.query.AttributeConstants;
 import com.google.gson.JsonSyntaxException;
 
 public class RottenTomatoesMovieQuery extends DataItem {
