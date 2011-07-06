@@ -142,8 +142,6 @@ public class Main extends Thread {
 			RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id, api);
 			apiCallCount = mq.getApiCallCount();
 			
-			rtQueueDao.updateQueryDate(id, nowDate);
-			
 			boolean changed = (new DataItemDao(conn)).putDataItem(mq);
 			if (changed) {
 			    rtQueueDao.updateFoundDate(id, nowDate);
@@ -155,6 +153,8 @@ public class Main extends Thread {
 			e.printStackTrace();
 			result = e.toString();
 		    }
+		    
+		    rtQueueDao.updateQueryDate(id, nowDate);
 		    
 		} else {
 		    result = "Not stale";
