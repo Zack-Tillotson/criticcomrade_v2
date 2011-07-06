@@ -6,8 +6,9 @@
 create table rt_queue (
         rt_id integer not null,
         link text not null,
-        date_last_queried timestamp,
-        date_last_found timestamp,
+        date_last_queried datetime null default null,
+        date_last_found datetime null default null,
+        date_lock datetime null default null,
         --
         primary key(rt_id)
 );
@@ -15,7 +16,7 @@ create table rt_queue (
 create table item_queue (
         item_id integer not null auto_increment,
         date_created timestamp not null,
-        date_pushed timestamp,        
+        date_pushed datetime,        
         --
         primary key(item_id)
 );
