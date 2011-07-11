@@ -39,3 +39,13 @@ create table rt_activity (
 	--
         foreign key (rt_id) references rt_queue(rt_id)
 );
+
+create table rt_scrape_activity (
+	rt_id int not null,
+	ts timestamp not null,
+	status text not null,
+	estimated_web_calls int not null,
+	etl_duration_seconds int not null,
+	--
+        foreign key (rt_id) references rt_queue(rt_id)
+);

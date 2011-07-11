@@ -4,7 +4,7 @@ import java.sql.*;
 import java.util.*;
 import java.util.Date;
 
-public class RtQueueDao extends EtlDao {
+public class RtQueueDao extends AbstractDao {
     
     public RtQueueDao(Connection conn) {
 	super(conn);

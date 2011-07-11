@@ -3,69 +3,13 @@ package com.criticcomrade.etl.query.db;
 import java.sql.*;
 import java.util.*;
 
+import com.criticcomrade.etl.data.*;
 import com.criticcomrade.etl.query.AttributeConstants;
-import com.criticcomrade.etl.query.data.*;
 
-public class DataItemDao extends EtlDao {
+public class DataItemDao extends AbstractDao {
     
     public DataItemDao(Connection conn) {
 	super(conn);
-    }
-    
-    private static Map<String, List<String>> keyAttributes = null;
-    
-    private static Map<String, List<String>> getKeyAttributes() {
-	
-	if (keyAttributes == null) {
-	    keyAttributes = new HashMap<String, List<String>>();
-	    
-	    ArrayList<String> l;
-	    
-	    // MOVIE
-	    l = new ArrayList<String>();
-	    l.add(AttributeConstants.MOVIE_ID);
-	    keyAttributes.put(AttributeConstants.MOVIE, l);
-	    
-	    // CAST
-	    l = new ArrayList<String>();
-	    l.add(AttributeConstants.CAST_NAME);
-	    keyAttributes.put(AttributeConstants.CAST, l);
-	    
-	    // DIRECTOR
-	    l = new ArrayList<String>();
-	    l.add(AttributeConstants.DIRECTOR_NAME);
-	    keyAttributes.put(AttributeConstants.DIRECTOR, l);
-	    
-	    // RELEASEDATES
-	    l = new ArrayList<String>();
-	    l.add(AttributeConstants.RELEASEDATES_THEATER);
-	    l.add(AttributeConstants.RELEASEDATES_DVD);
-	    keyAttributes.put(AttributeConstants.RELEASEDATES, l);
-	    
-	    // POSTERS
-	    l = new ArrayList<String>();
-	    l.add(AttributeConstants.POSTERS_DETAILED);
-	    l.add(AttributeConstants.POSTERS_ORIGINAL);
-	    l.add(AttributeConstants.POSTERS_PROFILE);
-	    l.add(AttributeConstants.POSTERS_THUMBNAIL);
-	    keyAttributes.put(AttributeConstants.POSTERS, l);
-	    
-	    // REVIEW
-	    l = new ArrayList<String>();
-	    l.add(AttributeConstants.REVIEW_LINK);
-	    l.add(AttributeConstants.REVIEW_QUOTE); // Some people are dumb and don't link to the actual review, just a generic site
-	    keyAttributes.put(AttributeConstants.REVIEW, l);
-	    
-	    // REVIEWER
-	    l = new ArrayList<String>();
-	    l.add(AttributeConstants.REVIEWER_NAME);
-	    l.add(AttributeConstants.REVIEWER_PUBLICATION);
-	    keyAttributes.put(AttributeConstants.REVIEWER, l);
-	    
-	}
-	
-	return keyAttributes;
-	
     }
     
     public boolean putDataItem(DataItem item) {
@@ -111,18 +55,11 @@ public class DataItemDao extends EtlDao {
     
     private boolean ensureItemIsBacked(DataItem item) {
 	
-	// Look for data attributes by data type
-	Collection<Attribute> keys = new ArrayList<Attribute>();
-	for (Attribute attr : item.getAttributes()) {
-	    if (getKeyAttributes().get(item.getType()).contains(attr.attribute)) {
-		keys.add(attr);
-	    }
-	}
-	
 	// Find which item we're looking at
-	int id = findItemByAttributes(item.getType(), keys);
-	
-	if (id == 0) {
+	int id;
+	try {
+	    id = findItemIdByAttributes(item);
+	} catch (AmbiguousQueryException e) {
 	    id = addNewDataItem();
 	}
 	
@@ -147,10 +84,53 @@ public class DataItemDao extends EtlDao {
 	
     }
     
-    private int findItemByAttributes(String type, Collection<Attribute> keys) {
+    private int findItemIdByAttributes(DataItem item) throws AmbiguousQueryException {
 	
-	keys.add(new Attribute(AttributeConstants.TYPE, type));
+	Collection<Attribute> keys = new ArrayList<Attribute>();
+	for (Attribute attr : item.getAttributes()) {
+	    if (AttributeConstants.getKeyAttributes().get(item.getType()).contains(attr.attribute)) {
+		keys.add(attr);
+	    }
+	}
 	
+	keys.add(new Attribute(AttributeConstants.TYPE, item.getType()));
+	
+	List<Integer> ids = findItemIdsByAttributes(keys);
+	
+	if (ids.size() == 1) {
+	    return ids.get(0).intValue();
+	}
+	
+	throw new AmbiguousQueryException();
+	
+    }
+    
+    public DataItem findItemByAttributes(List<Attribute> keys) throws BadDataItemException {
+	Collection<DataItem> ret = findItemsByAttributes(keys);
+	if (ret.size() > 0) {
+	    return ret.iterator().next();
+	} else {
+	    return null;
+	}
+    }
+    
+    public Collection<DataItem> findItemsByAttributes(List<Attribute> keys) throws BadDataItemException {
+	
+	findItemIdsByAttributes(keys);
+	
+	List<Integer> ids = findItemIdsByAttributes(keys);
+	
+	// Load the data item for each item id
+	Collection<DataItem> ret = new ArrayList<DataItem>();
+	for (Integer id : ids) {
+	    ret.add(loadDataItem(id));
+	}
+	
+	return ret;
+	
+    }
+    
+    private List<Integer> findItemIdsByAttributes(Collection<Attribute> keys) {
 	try {
 	    
 	    List<String> values = new ArrayList<String>();
@@ -170,19 +150,17 @@ public class DataItemDao extends EtlDao {
 	    }
 	    statement.setInt(values.size() + 1, keys.size());
 	    
-	    int id;
+	    List<Integer> ids = new ArrayList<Integer>();
 	    
 	    ResultSet res = statement.executeQuery();
-	    if (res.next()) {
-		id = res.getInt(1); // Found the item
-	    } else {
-		id = 0; // Didn't find item with all the attributes
+	    while (res.next()) {
+		ids.add(res.getInt(1)); // Found the item
 	    }
 	    
 	    res.close();
 	    statement.close();
 	    
-	    return id;
+	    return ids;
 	    
 	} catch (SQLException e) {
 	    throw new RuntimeException(e);
@@ -354,4 +332,108 @@ public class DataItemDao extends EtlDao {
 	}
 	
     }
+    
+    private DataItem loadDataItem(int id) throws BadDataItemException {
+	
+	// Get attributes
+	Collection<Attribute> attrs = loadAttributes(id);
+	
+	// Get subitems
+	Collection<DataItem> subItems = new ArrayList<DataItem>();
+	for (Attribute attr : attrs) {
+	    if (AttributeConstants.getObjectTypeAttributeNames().contains(attr.attribute)) {
+		subItems.add(loadDataItem(id));
+	    }
+	}
+	
+	// Find the type
+	String type = null;
+	for (Attribute attr : attrs) {
+	    if (attr.attribute.equals(AttributeConstants.TYPE)) {
+		type = attr.value;
+	    }
+	}
+	if (type == null) {
+	    throw new BadDataItemException();
+	}
+	
+	return new LoadedDataItem(type, subItems, attrs);
+	
+    }
+    
+    private Collection<Attribute> loadAttributes(int id) {
+	
+	try {
+	    
+	    // Remove the old attrs
+	    StringBuilder sql = new StringBuilder("select attr_name, attr_value from data where item_id = ?");
+	    PreparedStatement statement = conn.prepareStatement(sql.toString());
+	    statement.setInt(1, id);
+	    
+	    ResultSet rs = statement.executeQuery();
+	    
+	    List<Attribute> ret = new ArrayList<Attribute>();
+	    while (rs.next()) {
+		final String attrName = rs.getString(1);
+		final String attrValue = rs.getString(2);
+		ret.add(new Attribute(attrName, attrValue));
+	    }
+	    
+	    return ret;
+	    
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
+	
+    }
+    
+    public boolean setAttribute(int id, String name, String value) {
+	
+	try {
+	    
+	    // Remove the old attr
+	    StringBuilder sql = new StringBuilder("delete from data where item_id = ? and attr_name = ?");
+	    PreparedStatement statement = conn.prepareStatement(sql.toString());
+	    statement.setInt(1, id);
+	    statement.setString(2, name);
+	    
+	    int changed = statement.executeUpdate();
+	    
+	    sql = new StringBuilder("insert into data (item_id, attr_name, attr_value) values (?, ?, ?)");
+	    statement = conn.prepareStatement(sql.toString());
+	    statement.setInt(1, id);
+	    statement.setString(2, name);
+	    statement.setString(3, value);
+	    
+	    statement.executeUpdate();
+	    
+	    return changed > 0;
+	    
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
+    }
+    
+    private class LoadedDataItem extends DataItem {
+	
+	private final Collection<DataItem> subItems;
+	private final Collection<Attribute> attrs;
+	
+	public LoadedDataItem(String type, Collection<DataItem> subItems, Collection<Attribute> attrs) {
+	    super(type);
+	    this.subItems = subItems;
+	    this.attrs = attrs;
+	}
+	
+	@Override
+	protected Collection<DataItem> buildSubItems() {
+	    return subItems;
+	}
+	
+	@Override
+	protected Collection<Attribute> getDirectAttributes() {
+	    return attrs;
+	}
+    }
+    
 }

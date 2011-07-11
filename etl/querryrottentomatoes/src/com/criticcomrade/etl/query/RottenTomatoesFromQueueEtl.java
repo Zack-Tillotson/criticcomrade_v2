@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.util.*;
 
-import com.criticcomrade.etl.query.data.*;
+import com.criticcomrade.etl.data.*;
 import com.criticcomrade.etl.query.db.*;
 
 public class RottenTomatoesFromQueueEtl extends Thread {
@@ -86,9 +86,11 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     
     public void doMovieEtl(String id) throws IOException {
 	
+	RtQueueDao rtQueueDao = new RtQueueDao(conn);
+	final DataItemDao dataItemDao = new DataItemDao(conn);
+	
 	long startTime = System.currentTimeMillis();
 	int apiCallCount = 0;
-	RtQueueDao rtQueueDao = new RtQueueDao(conn);
 	Date nowDate = new Date();
 	String result;
 	
@@ -98,30 +100,19 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	    
 	    try {
 		
-		if ((nowDate.getTime() - rtQueueDao.getLastQueryDate(id).getTime()) > STALE_TIME_PERIOD) {
-		    
-		    try {
-			
-			RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id);
-			apiCallCount = mq.getApiCallCount();
-			
-			boolean changed = (new DataItemDao(conn)).putDataItem(mq);
-			if (changed) {
-			    rtQueueDao.updateFoundDate(id, nowDate);
-			}
-			
-			result = "Updated";
-			
-		    } catch (Exception e) {
-			result = e.toString();
-		    }
-		    
-		    rtQueueDao.updateQueryDate(id, nowDate);
-		    
-		} else {
-		    result = "Not stale";
+		RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id);
+		apiCallCount = mq.getApiCallCount();
+		
+		boolean changed = dataItemDao.putDataItem(mq);
+		if (changed) {
+		    rtQueueDao.updateFoundDate(id, nowDate);
 		}
 		
+		rtQueueDao.updateQueryDate(id, nowDate);
+		result = "Updated";
+		
+	    } catch (Exception e) {
+		result = e.toString();
 	    } finally {
 		rtQueueDao.removeMovieLock(id, rtQueueDao);
 	    }
@@ -143,4 +134,5 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	    printAttrsTree(tab + "\t", dataItem);
 	}
     }
+    
 }
