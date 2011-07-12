@@ -163,6 +163,24 @@ public class RtQueueDao extends AbstractDao {
 	}
     }
     
+    public void updateScrapeDate(String id, Date when) {
+	
+	try {
+	    
+	    String sql = "update rt_queue set date_last_scraped = ? where rt_id = ?";
+	    
+	    PreparedStatement statement = conn.prepareStatement(sql);
+	    statement.setTimestamp(1, new java.sql.Timestamp(when.getTime()));
+	    statement.setString(2, id);
+	    statement.executeUpdate();
+	    
+	    statement.close();
+	    
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
+    }
+    
     public void updateFoundDate(String id, Date when) {
 	
 	try {
@@ -190,6 +208,54 @@ public class RtQueueDao extends AbstractDao {
 	    PreparedStatement statement = conn.prepareStatement(sql);
 	    statement.setTimestamp(1, new Timestamp(start.getTime()));
 	    statement.setTimestamp(2, new Timestamp(end.getTime()));
+	    ResultSet rs = statement.executeQuery();
+	    
+	    List<String> ret = new ArrayList<String>();
+	    while (rs.next()) {
+		ret.add(rs.getString(1));
+	    }
+	    
+	    rs.close();
+	    statement.close();
+	    
+	    return ret;
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
+    }
+    
+    public List<String> getMovieScrapeActiveWithinTimePeriod(Date start, Date end) {
+	
+	try {
+	    
+	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_found > ? and (date_last_scraped is null or date_last_scraped < ?) order by date_last_found desc limit 1";
+	    
+	    PreparedStatement statement = conn.prepareStatement(sql);
+	    statement.setTimestamp(1, new Timestamp(start.getTime()));
+	    statement.setTimestamp(2, new Timestamp(end.getTime()));
+	    ResultSet rs = statement.executeQuery();
+	    
+	    List<String> ret = new ArrayList<String>();
+	    while (rs.next()) {
+		ret.add(rs.getString(1));
+	    }
+	    
+	    rs.close();
+	    statement.close();
+	    
+	    return ret;
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
+    }
+    
+    public List<String> getMovieWithNoScrapeDate() {
+	
+	try {
+	    
+	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_scraped is null and date_last_queried is not null order by rt_id desc limit 1";
+	    
+	    PreparedStatement statement = conn.prepareStatement(sql);
 	    ResultSet rs = statement.executeQuery();
 	    
 	    List<String> ret = new ArrayList<String>();

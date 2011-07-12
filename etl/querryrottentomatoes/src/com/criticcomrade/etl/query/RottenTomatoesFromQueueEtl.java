@@ -1,15 +1,15 @@
 package com.criticcomrade.etl.query;
 
 import java.io.IOException;
-import java.sql.Connection;
+import java.sql.*;
 import java.util.*;
+import java.util.Date;
 
 import com.criticcomrade.etl.data.*;
 import com.criticcomrade.etl.query.db.*;
 
 public class RottenTomatoesFromQueueEtl extends Thread {
     
-    private static final int STALE_TIME_PERIOD = 1000 * 60 * 60 * 24; // 1 Day
     private static final int ACTIVE_TIME_PERIOD_START = 1000 * 60 * 60 * 24 * 7; // 7 Day
     private static final int ACTIVE_TIME_PERIOD_END = 1000 * 60 * 60 * 24; // 1 Day
     
@@ -84,7 +84,9 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	
     }
     
-    public void doMovieEtl(String id) throws IOException {
+    public DataItem doMovieEtl(String id) throws IOException {
+	
+	RottenTomatoesMovieQuery mq = null;
 	
 	RtQueueDao rtQueueDao = new RtQueueDao(conn);
 	final DataItemDao dataItemDao = new DataItemDao(conn);
@@ -100,7 +102,7 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	    
 	    try {
 		
-		RottenTomatoesMovieQuery mq = new RottenTomatoesMovieQuery(id);
+		mq = new RottenTomatoesMovieQuery(id);
 		apiCallCount = mq.getApiCallCount();
 		
 		boolean changed = dataItemDao.putDataItem(mq);
@@ -108,12 +110,13 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 		    rtQueueDao.updateFoundDate(id, nowDate);
 		}
 		
-		rtQueueDao.updateQueryDate(id, nowDate);
 		result = "Updated";
 		
 	    } catch (Exception e) {
 		result = e.toString();
+		
 	    } finally {
+		rtQueueDao.updateQueryDate(id, nowDate);
 		rtQueueDao.removeMovieLock(id, rtQueueDao);
 	    }
 	}
@@ -122,9 +125,11 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	(new RtActivityDao(conn)).addApiCallToLog(id, result, apiCallCount, (int) ((endTime - startTime) / 1000));
 	System.out.println(String.format("%s %s", id, result));
 	
+	return mq;
+	
     }
     
-    private void printAttrsTree(String tab, DataItem item) {
+    public static void printAttrsTree(String tab, DataItem item) {
 	System.out.println(tab + item.getType() + " " + item.getId());
 	for (Attribute attr : item.getAttributes()) {
 	    System.out.println(String.format("%s%s = %s", tab, attr.attribute, attr.value));
@@ -135,4 +140,10 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	}
     }
     
+    public static void main(String args[]) throws SQLException, IOException {
+	
+	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection());
+	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doMovieEtl("771204250"));
+	
+    }
 }

@@ -17,7 +17,9 @@ public class NumberOfPagesParser extends StringListParser<Integer> {
     protected Integer parseImpl() {
 	
 	Pattern p;
+	Pattern p2 = Pattern.compile("No Critic Reviews for ");
 	Matcher m;
+	Matcher m2;
 	
 	Status status = Status.BEFORE_CONTENT;
 	
@@ -32,6 +34,11 @@ public class NumberOfPagesParser extends StringListParser<Integer> {
 		    m = p.matcher(line);
 		    if (m.find()) {
 			status = Status.BEFORE_PAGE;
+		    } else {
+			m2 = p2.matcher(line); // No reviews for this movie
+			if (m2.find()) {
+			    return 0;
+			}
 		    }
 		    
 		    break;

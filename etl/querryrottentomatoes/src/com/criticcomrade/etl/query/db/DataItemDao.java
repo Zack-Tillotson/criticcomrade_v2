@@ -195,7 +195,12 @@ public class DataItemDao extends AbstractDao {
 	
     }
     
-    private int addNewDataItem() {
+    /**
+     * Synchronized so that we return the correct item_id for each item
+     * 
+     * @return
+     */
+    private synchronized int addNewDataItem() {
 	
 	try {
 	    
@@ -342,7 +347,7 @@ public class DataItemDao extends AbstractDao {
 	Collection<DataItem> subItems = new ArrayList<DataItem>();
 	for (Attribute attr : attrs) {
 	    if (AttributeConstants.getObjectTypeAttributeNames().contains(attr.attribute)) {
-		subItems.add(loadDataItem(id));
+		subItems.add(loadDataItem(Integer.parseInt(attr.value)));
 	    }
 	}
 	
@@ -357,7 +362,7 @@ public class DataItemDao extends AbstractDao {
 	    throw new BadDataItemException();
 	}
 	
-	return new LoadedDataItem(type, subItems, attrs);
+	return new LoadedDataItem(id, type, subItems, attrs);
 	
     }
     
@@ -407,7 +412,7 @@ public class DataItemDao extends AbstractDao {
 	    
 	    statement.executeUpdate();
 	    
-	    return changed > 0;
+	    return changed == 0;
 	    
 	} catch (SQLException e) {
 	    throw new RuntimeException(e);
@@ -419,8 +424,9 @@ public class DataItemDao extends AbstractDao {
 	private final Collection<DataItem> subItems;
 	private final Collection<Attribute> attrs;
 	
-	public LoadedDataItem(String type, Collection<DataItem> subItems, Collection<Attribute> attrs) {
+	public LoadedDataItem(int id, String type, Collection<DataItem> subItems, Collection<Attribute> attrs) {
 	    super(type);
+	    this.id = id;
 	    this.subItems = subItems;
 	    this.attrs = attrs;
 	}

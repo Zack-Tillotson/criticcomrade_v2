@@ -8,6 +8,7 @@ create table rt_queue (
         link text not null,
         date_last_queried datetime null default null,
         date_last_found datetime null default null,
+        date_last_scraped datetime null default null,
         date_lock datetime null default null,
         --
         primary key(rt_id)

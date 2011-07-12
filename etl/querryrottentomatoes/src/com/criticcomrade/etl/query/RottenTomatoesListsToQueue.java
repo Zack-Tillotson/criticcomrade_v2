@@ -47,6 +47,7 @@ public class RottenTomatoesListsToQueue extends Thread {
     private void addMovieToQueue(String id) {
 	RtQueueDao dao = new RtQueueDao(conn);
 	if (RtQueueDao.getMovieLock(id, dao)) {
+	    System.out.println(String.format("RT.com Id: %s", id));
 	    dao.removeMovieLock(id, dao);
 	}
     }

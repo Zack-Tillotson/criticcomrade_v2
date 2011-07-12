@@ -9,7 +9,6 @@ public abstract class DataItem {
     protected String type;
     protected int id;
     private Collection<DataItem> subItems;
-    private final Collection<Attribute> addedAttrs = new ArrayList<Attribute>();
     
     public DataItem(String type) {
 	this.type = type;
@@ -28,16 +27,11 @@ public abstract class DataItem {
 	return type;
     }
     
-    public void addAttribute(Attribute a) {
-	addedAttrs.add(a);
-    }
-    
     public Collection<Attribute> getAttributes() {
 	
 	Collection<Attribute> attrs = new ArrayList<Attribute>();
 	attrs.add(new Attribute(AttributeConstants.TYPE, type));
 	attrs.addAll(getDirectAttributes());
-	attrs.addAll(addedAttrs);
 	
 	// Remove nulls
 	for (Iterator<Attribute> iter = attrs.iterator(); iter.hasNext();) {

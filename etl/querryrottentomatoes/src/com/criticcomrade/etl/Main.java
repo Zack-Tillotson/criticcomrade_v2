@@ -6,6 +6,7 @@ import java.util.*;
 
 import com.criticcomrade.etl.query.*;
 import com.criticcomrade.etl.query.db.DaoUtility;
+import com.criticcomrade.etl.scrape.RottenTomatoesReviewsScrape;
 import com.google.gson.JsonSyntaxException;
 
 public class Main extends Thread {
@@ -13,6 +14,7 @@ public class Main extends Thread {
     private static final String PRINT_OPTIONS = "-?";
     private static final String FROM_QUEUE = "--from-queue";
     private static final String CURRENT_LISTS = "--from-current-lists";
+    private static final String SCRAPE_REVIEWS = "--scrape-reviews";
     
     private static Connection conn;
     
@@ -47,6 +49,32 @@ public class Main extends Thread {
 	    List<Thread> threads = new ArrayList<Thread>();
 	    for (int i = 0; i < numThreads; i++) {
 		threads.add(new RottenTomatoesFromQueueEtl(conn));
+	    }
+	    
+	    for (Thread thread : threads) {
+		thread.start();
+	    }
+	    
+	    // CONSIDER Add some logic to be able to control the ETL'ing threads gracefully
+	    
+	} else if (args[0].equals(SCRAPE_REVIEWS)) {
+	    
+	    if (args.length != 2) {
+		printOptions();
+		System.exit(1);
+	    }
+	    
+	    int numThreads;
+	    try {
+		numThreads = Integer.parseInt(args[1]);
+	    } catch (NumberFormatException e) {
+		printOptions();
+		throw e;
+	    }
+	    
+	    List<Thread> threads = new ArrayList<Thread>();
+	    for (int i = 0; i < numThreads; i++) {
+		threads.add(new RottenTomatoesReviewsScrape(conn));
 	    }
 	    
 	    for (Thread thread : threads) {

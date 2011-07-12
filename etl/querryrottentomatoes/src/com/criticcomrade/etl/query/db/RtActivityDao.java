@@ -25,7 +25,7 @@ public class RtActivityDao extends AbstractDao {
     }
     
     public void addWebCallToLog(String id, String status, int webCalls, int durationInSectonds) {
-	String sql = "insert into rt_activity (rt_id, status, estimated_web_calls, etl_duration_seconds) values (?, ?, ?, ?)";
+	String sql = "insert into rt_scrape_activity (rt_id, status, estimated_web_calls, etl_duration_seconds) values (?, ?, ?, ?)";
 	PreparedStatement statement;
 	try {
 	    statement = conn.prepareStatement(sql);
