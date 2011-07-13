@@ -295,13 +295,20 @@ public class RtQueueDao extends AbstractDao {
 	}
     }
     
-    public List<String> getMovieLeastRecentlyQueried() {
+    /**
+     * Gets a movie which was last querried before the stale date
+     * 
+     * @param stale The date movies should have been last queried before to be considered stale
+     * @return
+     */
+    public List<String> getMovieIsStale(Date stale) {
 	
 	try {
 	    
-	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_queried is not null order by date_last_queried asc limit 1";
+	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_queried is not null and date_last_queried < ? order by date_last_queried asc limit 1";
 	    
 	    PreparedStatement statement = conn.prepareStatement(sql);
+	    statement.setDate(1, new java.sql.Date(stale.getTime()));
 	    ResultSet rs = statement.executeQuery();
 	    
 	    List<String> ret = new ArrayList<String>();

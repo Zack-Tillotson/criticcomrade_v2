@@ -1,6 +1,7 @@
 package com.criticcomrade.etl.query.db;
 
 import java.sql.*;
+import java.util.Date;
 
 public class RtActivityDao extends AbstractDao {
     
@@ -38,6 +39,28 @@ public class RtActivityDao extends AbstractDao {
 	} catch (SQLException e) {
 	    e.printStackTrace();
 	}
+    }
+    
+    public int getNumberOfApiCallsSince(Date when) {
+	
+	int ret = 0;
+	
+	String sql = "select sum(estimated_api_calls) from rt_activity where ts > ?";
+	PreparedStatement statement;
+	try {
+	    statement = conn.prepareStatement(sql);
+	    statement.setDate(1, new java.sql.Date(when.getTime()));
+	    ResultSet rs = statement.executeQuery();
+	    if (rs.next()) {
+		ret = rs.getInt(1);
+	    }
+	    statement.close();
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	}
+	
+	return ret;
+	
     }
     
 }

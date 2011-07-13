@@ -23,6 +23,8 @@ public class WebPageGetter implements Iterator<String> {
 	    is = url.openStream(); // throws an IOException
 	    dis = new DataInputStream(new BufferedInputStream(is));
 	    
+	    line = dis.readLine();
+	    
 	    return dis;
 	    
 	} catch (MalformedURLException mue) {
