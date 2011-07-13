@@ -6,7 +6,7 @@ import java.util.*;
 
 import com.criticcomrade.etl.query.*;
 import com.criticcomrade.etl.query.db.DaoUtility;
-import com.criticcomrade.etl.scrape.RottenTomatoesReviewsScrape;
+import com.criticcomrade.etl.scrape.RottenTomatoesFromWebEtl;
 import com.google.gson.JsonSyntaxException;
 
 public class Main extends Thread {
@@ -14,7 +14,7 @@ public class Main extends Thread {
     private static final String PRINT_OPTIONS = "-?";
     private static final String FROM_QUEUE = "--from-queue";
     private static final String CURRENT_LISTS = "--from-current-lists";
-    private static final String SCRAPE_REVIEWS = "--scrape-reviews";
+    private static final String SCRAPE_REVIEWS = "--from-website";
     
     private static Connection conn;
     
@@ -74,7 +74,7 @@ public class Main extends Thread {
 	    
 	    List<Thread> threads = new ArrayList<Thread>();
 	    for (int i = 0; i < numThreads; i++) {
-		threads.add(new RottenTomatoesReviewsScrape(conn));
+		threads.add(new RottenTomatoesFromWebEtl(conn));
 	    }
 	    
 	    for (Thread thread : threads) {
