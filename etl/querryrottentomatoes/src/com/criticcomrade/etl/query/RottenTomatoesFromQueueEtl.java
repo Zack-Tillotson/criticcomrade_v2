@@ -14,8 +14,10 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     private static final int ACTIVE_TIME_PERIOD_END = 1000 * 60 * 60 * 24; // 1 Day
     private static final int STALE_TIME_PERIOD = 1000 * 60 * 60 * 24 * 30; // 1 Month
     private static final int API_THROTTLE_PERIOD = 1000 * 60 * 60 * 24; // 1 Day
-    private static final int API_THROTTLE_AMOUNT = 3000; // Only do 3000 calls a day
+    private static final int API_THROTTLE_AMOUNT = 8000 + new Random().nextInt(1000); // Don't do more than 9000 calls a day
     private final Connection conn;
+    
+    private final Date startWhen = new Date();
     
     public RottenTomatoesFromQueueEtl(Connection conn) {
 	this.conn = conn;
@@ -25,7 +27,6 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     public void run() {
 	
 	try {
-	    
 	    String id;
 	    while (shouldContinueToEtl() && ((id = getNextInQueueToEtl()) != null)) {
 		doMovieEtl(id);
@@ -37,12 +38,15 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     }
     
     /**
-     * This will check to make sure we haven't overuse the api
+     * Will quit after the set throttle period, and make sure we don't overuse the API during that
+     * time
      * 
      * @return
      */
     private boolean shouldContinueToEtl() {
-	return new RtActivityDao(conn).getNumberOfApiCallsSince(new Date((new Date()).getTime() - API_THROTTLE_PERIOD)) < API_THROTTLE_AMOUNT;
+	final Date nowWhen = new Date((new Date()).getTime() - API_THROTTLE_PERIOD);
+	return ((nowWhen.getTime() - startWhen.getTime()) < API_THROTTLE_PERIOD) &&
+	        (new RtActivityDao(conn).getNumberOfApiCallsSince(nowWhen) < API_THROTTLE_AMOUNT);
     }
     
     /**
@@ -145,7 +149,6 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     public static void main(String args[]) throws SQLException, IOException {
 	
 	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection());
-	o.shouldContinueToEtl();
 	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doMovieEtl("771204250"));
 	
     }
