@@ -12,8 +12,8 @@ public class MovieReviewParser extends StringListParser<DataItem> {
 	BEFORE_REVIEW, BEFORE_TMETERFIELDS, AT_SCORE, BEFORE_LINK
     }
     
-    public MovieReviewParser(List<String> lines) {
-	super(lines);
+    public MovieReviewParser(Iterator<String> iter) {
+	super(iter);
     }
     
     private Boolean positiveReview = null;

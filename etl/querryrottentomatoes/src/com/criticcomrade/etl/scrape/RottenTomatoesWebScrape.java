@@ -1,7 +1,6 @@
 package com.criticcomrade.etl.scrape;
 
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
 import java.sql.Connection;
 import java.util.*;
 
@@ -16,10 +15,15 @@ public class RottenTomatoesWebScrape {
     
     public RottenTomatoesWebScrape(Connection conn, String url) {
 	this.conn = conn;
-	doWebCallsAndParse(url);
+	try {
+	    doWebCallsAndParse(url);
+	} catch (IOException e) {
+	    e.printStackTrace();
+	    throw new RuntimeException(e);
+	}
     }
     
-    private void doWebCallsAndParse(String title) {
+    private void doWebCallsAndParse(String title) throws IOException {
 	
 	reviews = new ArrayList<DataItem>();
 	numPages = 1; // Updated by first page
@@ -27,9 +31,9 @@ public class RottenTomatoesWebScrape {
 	
 	for (int i = 0; i < numPages; i++) {
 	    
-	    List<String> lines = getWebPage(buildUrl(title, i + 1));
+	    WebPageGetter in = new WebPageGetter(buildUrl(title, i + 1));
 	    
-	    NumberOfPagesParser pageNumParser = (new NumberOfPagesParser(lines));
+	    NumberOfPagesParser pageNumParser = (new NumberOfPagesParser(in));
 	    pageNumParser.parse();
 	    try {
 		numPages = pageNumParser.getObject();
@@ -46,7 +50,7 @@ public class RottenTomatoesWebScrape {
 		continue;
 	    }
 	    
-	    MovieReviewParser pageReview = (new MovieReviewParser(lines));
+	    MovieReviewParser pageReview = (new MovieReviewParser(in));
 	    while (pageReview.parse()) {
 		try {
 		    reviews.add(pageReview.getObject());
@@ -66,38 +70,6 @@ public class RottenTomatoesWebScrape {
     
     public int getNumPages() {
 	return numPages;
-    }
-    
-    private List<String> getWebPage(String urlString) {
-	
-	List<String> ret = new ArrayList<String>();
-	
-	URL url;
-	InputStream is = null;
-	DataInputStream dis;
-	String line;
-	try {
-	    url = new URL(urlString);
-	    is = url.openStream(); // throws an IOException
-	    dis = new DataInputStream(new BufferedInputStream(is));
-	    
-	    while ((line = dis.readLine()) != null) {
-		ret.add(line);
-	    }
-	} catch (MalformedURLException mue) {
-	    mue.printStackTrace();
-	} catch (IOException ioe) {
-	    ioe.printStackTrace();
-	} finally {
-	    try {
-		is.close();
-	    } catch (IOException ioe) {
-		// nothing to see here
-	    }
-	}
-	
-	return ret;
-	
     }
     
     private String buildUrl(String title, int page) {

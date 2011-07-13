@@ -1,15 +1,15 @@
 package com.criticcomrade.etl.scrape;
 
-import java.util.List;
+import java.util.Iterator;
 
 public abstract class StringListParser<T> {
     
     private boolean lastParseSuccessful = false;
     private T lastResult;
-    private final List<String> lines;
+    private final Iterator<String> iter;
     
-    public StringListParser(List<String> lines) {
-	this.lines = lines;
+    public StringListParser(Iterator<String> iter) {
+	this.iter = iter;
     }
     
     /**
@@ -37,11 +37,11 @@ public abstract class StringListParser<T> {
     }
     
     protected final String getNextLine() {
-	return lines.remove(0);
+	return iter.next();
     }
     
     protected final boolean isMoreLinesExist() {
-	return lines.size() > 0;
+	return iter.hasNext();
     }
     
 }

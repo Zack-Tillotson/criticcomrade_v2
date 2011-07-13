@@ -28,7 +28,7 @@ public class RottenTomatoesReviewsScrape extends Thread {
 		
 		// If we didn't find any movies we want to scrape, just sleep for a bit so we can try again later
 		if (id == null) {
-		    sleep(1000 * 60 * 10);
+		    sleep(1000 * 60 * 15);
 		} else {
 		    scrapeMovieReviews(id);
 		    sleep(new Random().nextInt(10 * 1000)); // Don't be mean

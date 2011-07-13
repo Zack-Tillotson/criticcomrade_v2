@@ -1,6 +1,6 @@
 package com.criticcomrade.etl.scrape;
 
-import java.util.List;
+import java.util.Iterator;
 import java.util.regex.*;
 
 public class NumberOfPagesParser extends StringListParser<Integer> {
@@ -9,8 +9,8 @@ public class NumberOfPagesParser extends StringListParser<Integer> {
 	BEFORE_CONTENT, BEFORE_PAGE
     }
     
-    public NumberOfPagesParser(List<String> lines) {
-	super(lines);
+    public NumberOfPagesParser(Iterator<String> iter) {
+	super(iter);
     }
     
     @Override
