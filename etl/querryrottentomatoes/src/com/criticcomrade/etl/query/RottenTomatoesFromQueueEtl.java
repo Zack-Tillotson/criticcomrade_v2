@@ -12,7 +12,9 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     
     private static final int ACTIVE_TIME_PERIOD_START = 1000 * 60 * 60 * 24 * 7; // 7 Day
     private static final int ACTIVE_TIME_PERIOD_END = 1000 * 60 * 60 * 24; // 1 Day
-    
+    private static final int STALE_TIME_PERIOD = 1000 * 60 * 60 * 24 * 30; // 1 Month
+    private static final int API_THROTTLE_PERIOD = 1000 * 60 * 60 * 24; // 1 Day
+    private static final int API_THROTTLE_AMOUNT = 3000; // Only do 3000 calls a day
     private final Connection conn;
     
     public RottenTomatoesFromQueueEtl(Connection conn) {
@@ -23,23 +25,24 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     public void run() {
 	
 	try {
-	    while (true) {
-		
-		String id = getNextInQueueToEtl();
-		
-		// If we didn't find any movies we want to query, just sleep for a bit so we can try again later
-		if (id == null) {
-		    sleep(1000 * 60 * 10);
-		} else {
-		    doMovieEtl(id);
-		}
+	    
+	    String id;
+	    while (shouldContinueToEtl() && ((id = getNextInQueueToEtl()) != null)) {
+		doMovieEtl(id);
 	    }
 	} catch (IOException e) {
 	    e.printStackTrace();
-	} catch (InterruptedException e) {
-	    e.printStackTrace();
 	}
 	
+    }
+    
+    /**
+     * This will check to make sure we haven't overuse the api
+     * 
+     * @return
+     */
+    private boolean shouldContinueToEtl() {
+	return new RtActivityDao(conn).getNumberOfApiCallsSince(new Date((new Date()).getTime() - API_THROTTLE_PERIOD)) < API_THROTTLE_AMOUNT;
     }
     
     /**
@@ -74,7 +77,7 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	
 	/////////////////
 	
-	List<String> staleMovies = rtQueueDao.getMovieLeastRecentlyQueried();
+	List<String> staleMovies = rtQueueDao.getMovieIsStale(new Date((new Date()).getTime() - STALE_TIME_PERIOD));
 	
 	if (staleMovies.size() > 0) {
 	    return staleMovies.get(0);
@@ -114,7 +117,6 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 		
 	    } catch (Exception e) {
 		result = e.toString();
-		
 	    } finally {
 		rtQueueDao.updateQueryDate(id, nowDate);
 		rtQueueDao.removeMovieLock(id, rtQueueDao);
@@ -143,6 +145,7 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     public static void main(String args[]) throws SQLException, IOException {
 	
 	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection());
+	o.shouldContinueToEtl();
 	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doMovieEtl("771204250"));
 	
     }
