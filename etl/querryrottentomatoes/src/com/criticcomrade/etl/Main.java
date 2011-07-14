@@ -96,6 +96,7 @@ public class Main extends Thread {
 	System.err.println("\t" + CURRENT_LISTS + "\t\tEnsure the current box office, in theaters, opening, and upcoming movies " +
 	        "from RottenTomatoes are on the queue");
 	System.err.println("\t" + FROM_QUEUE + " <# Threads>\tETL movies from the queue.");
+	System.err.println("\t" + SCRAPE_REVIEWS + " <# Threads>\tScrape rottentomatoes.com for review information.");
     }
     
 }

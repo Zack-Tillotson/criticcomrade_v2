@@ -30,8 +30,20 @@ public abstract class DataItem {
     public Collection<Attribute> getAttributes() {
 	
 	Collection<Attribute> attrs = new ArrayList<Attribute>();
-	attrs.add(new Attribute(AttributeConstants.TYPE, type));
 	attrs.addAll(getDirectAttributes());
+	
+	Collection<Attribute> extraAttrs = new ArrayList<Attribute>();
+	extraAttrs.add(new Attribute(AttributeConstants.TYPE, type));
+	for (DataItem subitem : getSubItems()) {
+	    extraAttrs.add(new Attribute(subitem.getType(), String.format("%d", subitem.getId())));
+	}
+	
+	// Make sure we have the extra items
+	for (Attribute extraAttr : extraAttrs) {
+	    if (!attrs.contains(extraAttr)) {
+		attrs.add(extraAttr);
+	    }
+	}
 	
 	// Remove nulls
 	for (Iterator<Attribute> iter = attrs.iterator(); iter.hasNext();) {

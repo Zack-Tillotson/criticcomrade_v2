@@ -26,8 +26,8 @@ public class RottenTomatoesFromWebEtl extends Thread {
     @Override
     public void run() {
 	try {
-	    while (shouldContinueToScrape()) {
-		String id = getNextInQueueToScrape();
+	    String id;
+	    while (shouldContinueToScrape() && ((id = getNextInQueueToScrape()) != null)) {
 		doScrapeMovieReviews(id);
 		sleep(new Random().nextInt(10 * 1000)); // Don't be mean
 	    }
@@ -83,6 +83,7 @@ public class RottenTomatoesFromWebEtl extends Thread {
 	long startTime = System.currentTimeMillis();
 	int webCallCount = 0;
 	int newReviewCount = 0;
+	int totReviewCount = 0;
 	Date nowDate = new Date();
 	String result;
 	
@@ -119,10 +120,15 @@ public class RottenTomatoesFromWebEtl extends Thread {
 			    if (val != null) {
 				for (DataItem review : scrape.getReviews()) {
 				    if (val.equalsIgnoreCase(review.getAttributeValue(AttributeConstants.REVIEW_LINK))) {
+					
+					totReviewCount++;
+					
+					// CONSIDER Refactor this so that you just add the attribute to the item and put the item like normal
 					if (dataItemDao.setAttribute(item.getId(), AttributeConstants.REVIEW_IS_POSITIVE, review
 					        .getAttributeValue(AttributeConstants.REVIEW_IS_POSITIVE))) {
 					    newReviewCount++;
 					}
+					
 				    }
 				}
 			    }
@@ -133,7 +139,7 @@ public class RottenTomatoesFromWebEtl extends Thread {
 			    rtQueueDao.updateFoundDate(id, nowDate);
 			}
 			
-			result = String.format("Updated %d reviews", newReviewCount);
+			result = String.format("Updated %d of %d reviews", newReviewCount, totReviewCount);
 			
 		    }
 		}
@@ -157,7 +163,7 @@ public class RottenTomatoesFromWebEtl extends Thread {
     public static void main(String[] args) throws SQLException {
 	
 	RottenTomatoesFromWebEtl o = new RottenTomatoesFromWebEtl(DaoUtility.getConnection());
-	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doScrapeMovieReviews("771208514"));
+	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doScrapeMovieReviews("771041149"));
 	
     }
     

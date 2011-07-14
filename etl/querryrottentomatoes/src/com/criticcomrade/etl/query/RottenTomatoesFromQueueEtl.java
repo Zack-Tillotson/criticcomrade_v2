@@ -115,11 +115,13 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 		boolean changed = dataItemDao.putDataItem(mq);
 		if (changed) {
 		    rtQueueDao.updateFoundDate(id, nowDate);
+		    result = "Updated";
+		} else {
+		    result = "No change";
 		}
 		
-		result = "Updated";
-		
 	    } catch (Exception e) {
+		e.printStackTrace();
 		result = e.toString();
 	    } finally {
 		rtQueueDao.updateQueryDate(id, nowDate);
@@ -149,7 +151,7 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     public static void main(String args[]) throws SQLException, IOException {
 	
 	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection());
-	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doMovieEtl("771204250"));
+	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doMovieEtl("771041149"));
 	
     }
 }

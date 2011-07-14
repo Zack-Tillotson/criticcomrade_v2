@@ -37,14 +37,8 @@ public class DataItemDao extends AbstractDao {
 	// First ensure the item is backed
 	boolean changed = ensureItemIsBacked(item);
 	
-	// Get the subitems link attributes (all should be backed)
-	Collection<Attribute> attrs = new ArrayList<Attribute>();
-	for (DataItem subitem : item.getSubItems()) {
-	    attrs.add(new Attribute(subitem.getType(), String.format("%d", subitem.getId())));
-	}
-	
-	// Write all the attributes
-	attrs.addAll(item.getAttributes());
+	// Write all the attributes (by this point all subitems are backed)
+	Collection<Attribute> attrs = item.getAttributes();
 	if (putItemAttributes(item.getId(), attrs)) {
 	    changed = true;
 	}
@@ -55,18 +49,23 @@ public class DataItemDao extends AbstractDao {
     
     private boolean ensureItemIsBacked(DataItem item) {
 	
+	// See if the db attributes are different from the current ones
+	boolean changed = false;
+	
 	// Find which item we're looking at
-	int id;
+	Integer id;
 	try {
 	    id = findItemIdByAttributes(item);
+	    if (id == null) {
+		id = addNewDataItem();
+		changed = true;
+	    }
 	} catch (AmbiguousQueryException e) {
-	    id = addNewDataItem();
+	    e.printStackTrace();
+	    throw new RuntimeException(e);
 	}
 	
 	item.setId(id);
-	
-	// See if the db attributes are different from the current ones
-	boolean changed = false;
 	
 	Collection<Attribute> dbAttrs = getItemAttrs(item.getId());
 	for (Attribute dbAttr : dbAttrs) {
@@ -84,12 +83,20 @@ public class DataItemDao extends AbstractDao {
 	
     }
     
-    private int findItemIdByAttributes(DataItem item) throws AmbiguousQueryException {
+    private Integer findItemIdByAttributes(DataItem item) throws AmbiguousQueryException {
 	
 	Collection<Attribute> keys = new ArrayList<Attribute>();
-	for (Attribute attr : item.getAttributes()) {
-	    if (AttributeConstants.getKeyAttributes().get(item.getType()).contains(attr.attribute)) {
-		keys.add(attr);
+	for (String keyName : AttributeConstants.getKeyAttributes().get(item.getType())) {
+	    boolean found = false;
+	    for (Attribute attr : item.getAttributes()) {
+		if (keyName.equals(attr.attribute)) {
+		    keys.add(attr);
+		    found = true;
+		    break;
+		}
+	    }
+	    if (!found) {
+		keys.add(new Attribute(keyName, null));
 	    }
 	}
 	
@@ -99,9 +106,11 @@ public class DataItemDao extends AbstractDao {
 	
 	if (ids.size() == 1) {
 	    return ids.get(0).intValue();
+	} else if (ids.size() == 0) {
+	    return null;
+	} else {
+	    throw new AmbiguousQueryException();
 	}
-	
-	throw new AmbiguousQueryException();
 	
     }
     
@@ -133,22 +142,32 @@ public class DataItemDao extends AbstractDao {
     private List<Integer> findItemIdsByAttributes(Collection<Attribute> keys) {
 	try {
 	    
+	    Collection<Attribute> posKeys = keys;
+	    Collection<Attribute> negKeys = new ArrayList<Attribute>();
+	    for (Iterator<Attribute> iter = posKeys.iterator(); iter.hasNext();) {
+		Attribute attr = iter.next();
+		if (attr.value == null) {
+		    negKeys.add(attr);
+		    iter.remove();
+		}
+	    }
+	    
 	    List<String> values = new ArrayList<String>();
 	    String sql = "select item_id from (select item_id, count(*) cnt from (select item_id, attr_name from data where ";
 	    
-	    for (Attribute key : keys) {
+	    for (Attribute key : posKeys) {
 		sql = sql + "(attr_name = ? and attr_value = ?) or ";
 		values.add(key.attribute);
 		values.add(key.value);
 	    }
 	    
-	    sql = sql + " false) a group by item_id) b where cnt = ?";
+	    sql = sql + " false) a group by item_id) b where cnt = ? order by 1 asc";
 	    
 	    PreparedStatement statement = conn.prepareStatement(sql);
 	    for (int i = 0; i < values.size(); i++) {
 		statement.setString(i + 1, values.get(i));
 	    }
-	    statement.setInt(values.size() + 1, keys.size());
+	    statement.setInt(values.size() + 1, posKeys.size());
 	    
 	    List<Integer> ids = new ArrayList<Integer>();
 	    
@@ -156,9 +175,40 @@ public class DataItemDao extends AbstractDao {
 	    while (res.next()) {
 		ids.add(res.getInt(1)); // Found the item
 	    }
-	    
 	    res.close();
 	    statement.close();
+	    
+	    if (!negKeys.isEmpty()) {
+		
+		// Reject any of these which have the negative (null) attributes
+		values.clear();
+		sql = "select item_id from (select item_id, count(*) cnt from (select item_id, attr_name from data where ";
+		
+		for (Attribute key : negKeys) {
+		    sql = sql + "(attr_name = ?) or ";
+		    values.add(key.attribute);
+		}
+		
+		sql = sql + " false) a group by item_id) b where cnt = ? order by 1 asc";
+		
+		statement = conn.prepareStatement(sql);
+		for (int i = 0; i < values.size(); i++) {
+		    statement.setString(i + 1, values.get(i));
+		}
+		statement.setInt(values.size() + 1, negKeys.size());
+		
+		List<Integer> negIds = new ArrayList<Integer>();
+		
+		res = statement.executeQuery();
+		while (res.next()) {
+		    negIds.add(res.getInt(1)); // Found the item
+		}
+		res.close();
+		statement.close();
+		
+		ids.removeAll(negIds);
+		
+	    }
 	    
 	    return ids;
 	    
@@ -275,7 +325,9 @@ public class DataItemDao extends AbstractDao {
 			statement.setString(i++, arg);
 		    }
 		    statement.executeUpdate();
+		    statement.close();
 		}
+		
 		// Add the new attrs
 		sql = new StringBuilder("insert into data(item_id, attr_name, attr_value) values");
 		
@@ -305,6 +357,8 @@ public class DataItemDao extends AbstractDao {
 		    }
 		    
 		    int rowsInserted = statement.executeUpdate();
+		    statement.close();
+		    
 		    if (rowsInserted != toAdd.size()) {
 			throw new SQLException(String.format("Failed to insert attributes [%d, %s]", id, toRemove.toString()));
 		    }
@@ -384,6 +438,9 @@ public class DataItemDao extends AbstractDao {
 		ret.add(new Attribute(attrName, attrValue));
 	    }
 	    
+	    rs.close();
+	    statement.close();
+	    
 	    return ret;
 	    
 	} catch (SQLException e) {
@@ -396,23 +453,45 @@ public class DataItemDao extends AbstractDao {
 	
 	try {
 	    
-	    // Remove the old attr
-	    StringBuilder sql = new StringBuilder("delete from data where item_id = ? and attr_name = ?");
+	    // If the old attribute doesn't exist or isn't the same
+	    StringBuilder sql = new StringBuilder("select * from data where item_id = ? and attr_name = ? and attr_value = ?");
 	    PreparedStatement statement = conn.prepareStatement(sql.toString());
-	    statement.setInt(1, id);
-	    statement.setString(2, name);
-	    
-	    int changed = statement.executeUpdate();
-	    
-	    sql = new StringBuilder("insert into data (item_id, attr_name, attr_value) values (?, ?, ?)");
-	    statement = conn.prepareStatement(sql.toString());
 	    statement.setInt(1, id);
 	    statement.setString(2, name);
 	    statement.setString(3, value);
 	    
-	    statement.executeUpdate();
+	    ResultSet rs = statement.executeQuery();
+	    boolean found = rs.next();
 	    
-	    return changed == 0;
+	    rs.close();
+	    statement.close();
+	    
+	    if (found) {
+		return false;
+	    } else {
+		
+		// Remove the old attr
+		sql = new StringBuilder("delete from data where item_id = ? and attr_name = ?");
+		statement = conn.prepareStatement(sql.toString());
+		statement.setInt(1, id);
+		statement.setString(2, name);
+		
+		statement.executeUpdate();
+		statement.close();
+		
+		// Add the attr
+		sql = new StringBuilder("insert into data (item_id, attr_name, attr_value) values (?, ?, ?)");
+		statement = conn.prepareStatement(sql.toString());
+		statement.setInt(1, id);
+		statement.setString(2, name);
+		statement.setString(3, value);
+		
+		statement.executeUpdate();
+		statement.close();
+		
+		return true;
+		
+	    }
 	    
 	} catch (SQLException e) {
 	    throw new RuntimeException(e);

@@ -33,31 +33,37 @@ public class RottenTomatoesWebScraper {
 	    
 	    WebPageGetter in = new WebPageGetter(buildUrl(title, i + 1));
 	    
-	    NumberOfPagesParser pageNumParser = (new NumberOfPagesParser(in));
-	    pageNumParser.parse();
 	    try {
-		numPages = pageNumParser.getObject();
-		if (numPages == 0) {
-		    return;
-		}
-	    } catch (ResultDoesNotExistException e) {
-		if (!haveRetried) {
-		    haveRetried = true;
-		    i--;
-		} else {
-		    e.printStackTrace();
-		}
-		continue;
-	    }
-	    
-	    MovieReviewParser pageReview = (new MovieReviewParser(in));
-	    while (pageReview.parse()) {
+		
+		NumberOfPagesParser pageNumParser = (new NumberOfPagesParser(in));
+		pageNumParser.parse();
 		try {
-		    reviews.add(pageReview.getObject());
+		    numPages = pageNumParser.getObject();
+		    if (numPages == 0) {
+			return;
+		    }
 		} catch (ResultDoesNotExistException e) {
-		    e.printStackTrace();
-		    break;
+		    if (!haveRetried) {
+			haveRetried = true;
+			i--;
+		    } else {
+			e.printStackTrace();
+		    }
+		    continue;
 		}
+		
+		MovieReviewParser pageReview = (new MovieReviewParser(in));
+		while (pageReview.parse()) {
+		    try {
+			reviews.add(pageReview.getObject());
+		    } catch (ResultDoesNotExistException e) {
+			e.printStackTrace();
+			break;
+		    }
+		}
+		
+	    } finally {
+		in.closeDataInputStream();
 	    }
 	    
 	}

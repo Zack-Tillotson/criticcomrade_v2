@@ -68,11 +68,12 @@ public class MovieReviewParser extends StringListParser<DataItem> {
 		    
 		    if (m.find()) {
 			final String link = m.group(1);
+			final Boolean pos = positiveReview;
 			return new DataItem(AttributeConstants.REVIEW) {
 			    @Override
 			    protected Collection<Attribute> getDirectAttributes() {
 				Collection<Attribute> attrs = new ArrayList<Attribute>();
-				attrs.add(new Attribute(AttributeConstants.REVIEW_IS_POSITIVE, positiveReview ? "TRUE" : "FALSE"));
+				attrs.add(new Attribute(AttributeConstants.REVIEW_IS_POSITIVE, pos ? "TRUE" : "FALSE"));
 				attrs.add(new Attribute(AttributeConstants.REVIEW_LINK, link));
 				return attrs;
 			    }

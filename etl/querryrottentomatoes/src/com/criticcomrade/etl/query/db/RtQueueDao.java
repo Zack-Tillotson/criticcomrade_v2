@@ -228,7 +228,7 @@ public class RtQueueDao extends AbstractDao {
 	
 	try {
 	    
-	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_found > ? and (date_last_scraped is null or date_last_scraped < ?) order by date_last_found asc limit 1";
+	    String sql = "select rt_id from rt_queue, data d, data dd where date_locked is null and date_last_found > ? and (date_last_scraped is null or date_last_scraped < ?) and d.attr_value = rt_id and d.item_id = dd.item_id and dd.attr_name = 'REVIEW' order by date_last_found asc limit 1";
 	    
 	    PreparedStatement statement = conn.prepareStatement(sql);
 	    statement.setTimestamp(1, new Timestamp(start.getTime()));
@@ -253,7 +253,7 @@ public class RtQueueDao extends AbstractDao {
 	
 	try {
 	    
-	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_scraped is null and date_last_queried is not null order by rt_id desc limit 1";
+	    String sql = "select rt_id from rt_queue, data d, data dd where date_locked is null and date_last_scraped is null and date_last_queried is not null and d.attr_value = rt_id and d.item_id = dd.item_id and dd.attr_name = 'REVIEW' order by rt_id desc limit 1";
 	    
 	    PreparedStatement statement = conn.prepareStatement(sql);
 	    ResultSet rs = statement.executeQuery();
