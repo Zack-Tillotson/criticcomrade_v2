@@ -151,7 +151,7 @@ public class RottenTomatoesFromQueueEtl extends Thread {
     public static void main(String args[]) throws SQLException, IOException {
 	
 	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection());
-	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doMovieEtl("771041149"));
+	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doMovieEtl("770687943"));
 	
     }
 }

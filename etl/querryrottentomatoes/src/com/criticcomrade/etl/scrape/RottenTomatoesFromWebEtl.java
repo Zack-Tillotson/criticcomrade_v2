@@ -163,7 +163,7 @@ public class RottenTomatoesFromWebEtl extends Thread {
     public static void main(String[] args) throws SQLException {
 	
 	RottenTomatoesFromWebEtl o = new RottenTomatoesFromWebEtl(DaoUtility.getConnection());
-	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doScrapeMovieReviews("771041149"));
+	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doScrapeMovieReviews("770687943"));
 	
     }
     

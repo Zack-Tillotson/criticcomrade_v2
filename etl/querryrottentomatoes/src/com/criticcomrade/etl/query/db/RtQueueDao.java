@@ -152,7 +152,7 @@ public class RtQueueDao extends AbstractDao {
 	    String sql = "update rt_queue set date_last_queried = ? where rt_id = ?";
 	    
 	    PreparedStatement statement = conn.prepareStatement(sql);
-	    statement.setTimestamp(1, new java.sql.Timestamp(when.getTime()));
+	    statement.setTimestamp(1, when == null ? null : new java.sql.Timestamp(when.getTime()));
 	    statement.setString(2, id);
 	    statement.executeUpdate();
 	    
@@ -203,7 +203,7 @@ public class RtQueueDao extends AbstractDao {
 	
 	try {
 	    
-	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_found > ? and date_last_found < ? order by date_last_found desc limit 1";
+	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_found > ? and (date_last_queried is null or date_last_queried < ?) order by date_last_found desc limit 1";
 	    
 	    PreparedStatement statement = conn.prepareStatement(sql);
 	    statement.setTimestamp(1, new Timestamp(start.getTime()));
@@ -224,6 +224,14 @@ public class RtQueueDao extends AbstractDao {
 	}
     }
     
+    /**
+     * Will return a movie with at least one review which is active since the start of the period,
+     * but not scraped since the end
+     * 
+     * @param start
+     * @param end
+     * @return
+     */
     public List<String> getMovieScrapeActiveWithinTimePeriod(Date start, Date end) {
 	
 	try {

@@ -34,16 +34,20 @@ public class DataItemDao extends AbstractDao {
     
     private boolean writeAttributes(DataItem item) {
 	
-	// First ensure the item is backed
-	boolean changed = ensureItemIsBacked(item);
-	
-	// Write all the attributes (by this point all subitems are backed)
-	Collection<Attribute> attrs = item.getAttributes();
-	if (putItemAttributes(item.getId(), attrs)) {
-	    changed = true;
+	synchronized (conn) {
+	    
+	    // First ensure the item is backed
+	    boolean changed = ensureItemIsBacked(item);
+	    
+	    // Write all the attributes (by this point all subitems are backed)
+	    Collection<Attribute> attrs = item.getAttributes();
+	    if (putItemAttributes(item.getId(), attrs)) {
+		changed = true;
+	    }
+	    
+	    return changed;
+	    
 	}
-	
-	return changed;
 	
     }
     
@@ -109,7 +113,7 @@ public class DataItemDao extends AbstractDao {
 	} else if (ids.size() == 0) {
 	    return null;
 	} else {
-	    throw new AmbiguousQueryException();
+	    throw new AmbiguousQueryException(keys.toString() + " => " + ids.toString());
 	}
 	
     }
@@ -250,7 +254,7 @@ public class DataItemDao extends AbstractDao {
      * 
      * @return
      */
-    private synchronized int addNewDataItem() {
+    private int addNewDataItem() {
 	
 	try {
 	    
@@ -284,6 +288,7 @@ public class DataItemDao extends AbstractDao {
 	} catch (SQLException e) {
 	    throw new RuntimeException(e);
 	}
+	
     }
     
     private boolean putItemAttributes(int id, Collection<Attribute> attrs) {
@@ -451,51 +456,56 @@ public class DataItemDao extends AbstractDao {
     
     public boolean setAttribute(int id, String name, String value) {
 	
-	try {
+	synchronized (conn) {
 	    
-	    // If the old attribute doesn't exist or isn't the same
-	    StringBuilder sql = new StringBuilder("select * from data where item_id = ? and attr_name = ? and attr_value = ?");
-	    PreparedStatement statement = conn.prepareStatement(sql.toString());
-	    statement.setInt(1, id);
-	    statement.setString(2, name);
-	    statement.setString(3, value);
-	    
-	    ResultSet rs = statement.executeQuery();
-	    boolean found = rs.next();
-	    
-	    rs.close();
-	    statement.close();
-	    
-	    if (found) {
-		return false;
-	    } else {
+	    try {
 		
-		// Remove the old attr
-		sql = new StringBuilder("delete from data where item_id = ? and attr_name = ?");
-		statement = conn.prepareStatement(sql.toString());
-		statement.setInt(1, id);
-		statement.setString(2, name);
-		
-		statement.executeUpdate();
-		statement.close();
-		
-		// Add the attr
-		sql = new StringBuilder("insert into data (item_id, attr_name, attr_value) values (?, ?, ?)");
-		statement = conn.prepareStatement(sql.toString());
+		// If the old attribute doesn't exist or isn't the same
+		StringBuilder sql = new StringBuilder("select * from data where item_id = ? and attr_name = ? and attr_value = ?");
+		PreparedStatement statement = conn.prepareStatement(sql.toString());
 		statement.setInt(1, id);
 		statement.setString(2, name);
 		statement.setString(3, value);
 		
-		statement.executeUpdate();
+		ResultSet rs = statement.executeQuery();
+		boolean found = rs.next();
+		
+		rs.close();
 		statement.close();
 		
-		return true;
+		if (found) {
+		    return false;
+		} else {
+		    
+		    // Remove the old attr
+		    sql = new StringBuilder("delete from data where item_id = ? and attr_name = ?");
+		    statement = conn.prepareStatement(sql.toString());
+		    statement.setInt(1, id);
+		    statement.setString(2, name);
+		    
+		    statement.executeUpdate();
+		    statement.close();
+		    
+		    // Add the attr
+		    sql = new StringBuilder("insert into data (item_id, attr_name, attr_value) values (?, ?, ?)");
+		    statement = conn.prepareStatement(sql.toString());
+		    statement.setInt(1, id);
+		    statement.setString(2, name);
+		    statement.setString(3, value);
+		    
+		    statement.executeUpdate();
+		    statement.close();
+		    
+		    return true;
+		    
+		}
 		
+	    } catch (SQLException e) {
+		throw new RuntimeException(e);
 	    }
 	    
-	} catch (SQLException e) {
-	    throw new RuntimeException(e);
 	}
+	
     }
     
     private class LoadedDataItem extends DataItem {
