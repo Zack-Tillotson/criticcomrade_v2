@@ -1,3 +1,5 @@
 *.swp
-*.properties
+.metadata/
+*.class
 bin/
+*.properties
