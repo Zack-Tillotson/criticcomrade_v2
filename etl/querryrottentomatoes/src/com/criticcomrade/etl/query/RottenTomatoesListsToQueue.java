@@ -2,6 +2,8 @@ package com.criticcomrade.etl.query;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import com.criticcomrade.api.data.MovieShort;
 import com.criticcomrade.api.main.RottenTomatoesApi;
@@ -43,11 +45,16 @@ public class RottenTomatoesListsToQueue extends Thread {
 	}
     }
     
-    // Just add it to the queue to be picked up later
+    /**
+     * Add it to the queue and give it a nice last found date to be picked up later
+     * 
+     * @param id
+     */
     private void addMovieToQueue(String id) {
 	RtQueueDao dao = new RtQueueDao(conn);
 	if (RtQueueDao.getMovieLock(id, dao)) {
-	    System.out.println(String.format("RT.com Id: %s", id));
+	    System.out.println(String.format("%s RT.com Id: %s", new SimpleDateFormat().format(new Date()), id));
+	    dao.setAsActive(id);
 	    dao.removeMovieLock(id, dao);
 	}
     }

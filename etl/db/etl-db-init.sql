@@ -50,3 +50,10 @@ create table rt_scrape_activity (
 	--
         foreign key (rt_id) references rt_queue(rt_id)
 );
+
+create table etl_controller (
+	name int not null auto_increment,
+	ts timestamp not null,
+	--
+	primary key(name)
+);

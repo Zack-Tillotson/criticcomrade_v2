@@ -2,51 +2,23 @@ package com.criticcomrade.etl.query;
 
 import java.io.IOException;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 
-import com.criticcomrade.etl.data.*;
+import com.criticcomrade.etl.data.DataItem;
 import com.criticcomrade.etl.query.db.*;
 
-public class RottenTomatoesFromQueueEtl extends Thread {
+public class RottenTomatoesFromQueueEtl extends RottenTomatoesEtlThread {
     
-    private static final int ACTIVE_TIME_PERIOD_START = 1000 * 60 * 60 * 24 * 7; // 7 Day
-    private static final int ACTIVE_TIME_PERIOD_END = 1000 * 60 * 60 * 24; // 1 Day
-    private static final int STALE_TIME_PERIOD = 1000 * 60 * 60 * 24 * 30; // 1 Month
-    private static final int API_THROTTLE_PERIOD = 1000 * 60 * 60 * 24; // 1 Day
-    private static final int API_THROTTLE_AMOUNT = 8000 + new Random().nextInt(1000); // Don't do more than 9000 calls a day
-    private final Connection conn;
-    
-    private final Date startWhen = new Date();
-    
-    public RottenTomatoesFromQueueEtl(Connection conn) {
-	this.conn = conn;
+    public RottenTomatoesFromQueueEtl(Connection conn, int maxRuntime) throws AmbiguousQueryException {
+	super(conn, maxRuntime);
     }
     
     @Override
-    public void run() {
-	
-	try {
-	    String id;
-	    while (shouldContinueToEtl() && ((id = getNextInQueueToEtl()) != null)) {
-		doMovieEtl(id);
-	    }
-	} catch (IOException e) {
-	    e.printStackTrace();
-	}
-	
-    }
-    
-    /**
-     * Will quit after the set throttle period, and make sure we don't overuse the API during that
-     * time
-     * 
-     * @return
-     */
-    private boolean shouldContinueToEtl() {
-	final Date nowWhen = new Date((new Date()).getTime() - API_THROTTLE_PERIOD);
-	return ((nowWhen.getTime() - startWhen.getTime()) < API_THROTTLE_PERIOD) &&
-	        (new RtActivityDao(conn).getNumberOfApiCallsSince(nowWhen) < API_THROTTLE_AMOUNT);
+    protected boolean haveReasonToQuit() {
+	final Date nowWhen = new Date();
+	return (new RtActivityDao(conn).getNumberOfApiCallsSince(new Date(nowWhen.getTime() - API_THROTTLE_PERIOD)) >= API_THROTTLE_AMOUNT);
     }
     
     /**
@@ -58,7 +30,8 @@ public class RottenTomatoesFromQueueEtl extends Thread {
      * 
      * @return A RottenTomatoes movie ID to ETL
      */
-    private String getNextInQueueToEtl() {
+    @Override
+    protected String getNextIdToEtl() {
 	
 	final RtQueueDao rtQueueDao = new RtQueueDao(conn);
 	
@@ -91,7 +64,8 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	
     }
     
-    public DataItem doMovieEtl(String id) throws IOException {
+    @Override
+    public DataItem doEtlImpl(String id) {
 	
 	RottenTomatoesMovieQuery mq = null;
 	
@@ -120,6 +94,14 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 		    result = "No change";
 		}
 		
+	    } catch (IOException e) {
+		if (e.toString().startsWith("java.io.IOException: Server returned HTTP response code: 500 for URL: ")) { // Bad Id
+		    new RtQueueDao(conn).removeMovieFromQueue(id);
+		    result = "Bad id, removed from queue";
+		} else {
+		    e.printStackTrace();
+		    result = e.toString();
+		}
 	    } catch (Exception e) {
 		e.printStackTrace();
 		result = e.toString();
@@ -131,27 +113,16 @@ public class RottenTomatoesFromQueueEtl extends Thread {
 	
 	long endTime = System.currentTimeMillis();
 	(new RtActivityDao(conn)).addApiCallToLog(id, result, apiCallCount, (int) ((endTime - startTime) / 1000));
-	System.out.println(String.format("%s %s", id, result));
+	System.out.println(String.format("%s %s %s", new SimpleDateFormat().format(new Date(endTime)), id, result));
 	
 	return mq;
 	
     }
     
-    public static void printAttrsTree(String tab, DataItem item) {
-	System.out.println(tab + item.getType() + " " + item.getId());
-	for (Attribute attr : item.getAttributes()) {
-	    System.out.println(String.format("%s%s = %s", tab, attr.attribute, attr.value));
-	}
-	System.out.println();
-	for (DataItem dataItem : item.getSubItems()) {
-	    printAttrsTree(tab + "\t", dataItem);
-	}
-    }
-    
-    public static void main(String args[]) throws SQLException, IOException {
+    public static void main(String args[]) throws SQLException, IOException, AmbiguousQueryException {
 	
-	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection());
-	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doMovieEtl("770687943"));
+	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection(), 1000 * 60 * 10);
+	RottenTomatoesEtlThread.printAttrsTree("", o.doEtlImpl("770687943"));
 	
     }
 }

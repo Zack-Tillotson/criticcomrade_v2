@@ -1,6 +1,7 @@
 package com.criticcomrade.etl.scrape;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 
@@ -8,37 +9,15 @@ import com.criticcomrade.etl.data.*;
 import com.criticcomrade.etl.query.*;
 import com.criticcomrade.etl.query.db.*;
 
-public class RottenTomatoesFromWebEtl extends Thread {
+public class RottenTomatoesFromWebEtl extends RottenTomatoesEtlThread {
     
-    private static final int ACTIVE_TIME_PERIOD_START = 1000 * 60 * 60 * 24 * 7; // 7 Day
-    private static final int ACTIVE_TIME_PERIOD_END = 1000 * 60 * 60 * 24; // 1 Day
-    
-    private static final int API_THROTTLE_PERIOD = 1000 * 60 * 60 * 24; // 1 Day
-    
-    private final Connection conn;
-    
-    private final Date startWhen = new Date();
-    
-    public RottenTomatoesFromWebEtl(Connection conn) {
-	this.conn = conn;
+    public RottenTomatoesFromWebEtl(Connection conn, int maxRuntime) throws AmbiguousQueryException {
+	super(conn, maxRuntime);
     }
     
     @Override
-    public void run() {
-	try {
-	    String id;
-	    while (shouldContinueToScrape() && ((id = getNextInQueueToScrape()) != null)) {
-		doScrapeMovieReviews(id);
-		sleep(new Random().nextInt(10 * 1000)); // Don't be mean
-	    }
-	} catch (InterruptedException e) {
-	    e.printStackTrace();
-	}
-    }
-    
-    private boolean shouldContinueToScrape() {
-	final Date nowWhen = new Date((new Date()).getTime() - API_THROTTLE_PERIOD);
-	return ((nowWhen.getTime() - startWhen.getTime()) < API_THROTTLE_PERIOD);
+    protected boolean haveReasonToQuit() {
+	return false;
     }
     
     /**
@@ -48,7 +27,8 @@ public class RottenTomatoesFromWebEtl extends Thread {
      * 
      * @return A RottenTomatoes movie ID to ETL
      */
-    public String getNextInQueueToScrape() {
+    @Override
+    protected String getNextIdToEtl() {
 	
 	final RtQueueDao rtQueueDao = new RtQueueDao(conn);
 	
@@ -73,7 +53,8 @@ public class RottenTomatoesFromWebEtl extends Thread {
 	
     }
     
-    public DataItem doScrapeMovieReviews(String id) {
+    @Override
+    public DataItem doEtlImpl(String id) {
 	
 	DataItem ret = null;
 	
@@ -118,10 +99,9 @@ public class RottenTomatoesFromWebEtl extends Thread {
 			for (DataItem item : dbSubItems) {
 			    String val = item.getAttributeValue(AttributeConstants.REVIEW_LINK);
 			    if (val != null) {
+				totReviewCount++;
 				for (DataItem review : scrape.getReviews()) {
 				    if (val.equalsIgnoreCase(review.getAttributeValue(AttributeConstants.REVIEW_LINK))) {
-					
-					totReviewCount++;
 					
 					// CONSIDER Refactor this so that you just add the attribute to the item and put the item like normal
 					if (dataItemDao.setAttribute(item.getId(), AttributeConstants.REVIEW_IS_POSITIVE, review
@@ -154,16 +134,16 @@ public class RottenTomatoesFromWebEtl extends Thread {
 	
 	long endTime = System.currentTimeMillis();
 	(new RtActivityDao(conn)).addWebCallToLog(id, result, webCallCount, (int) ((endTime - startTime) / 1000));
-	System.out.println(String.format("%s %s", id, result));
+	System.out.println(String.format("%s %s %s", new SimpleDateFormat().format(new Date(endTime)), id, result));
 	
 	return ret;
 	
     }
     
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) throws SQLException, AmbiguousQueryException {
 	
-	RottenTomatoesFromWebEtl o = new RottenTomatoesFromWebEtl(DaoUtility.getConnection());
-	RottenTomatoesFromQueueEtl.printAttrsTree("", o.doScrapeMovieReviews("770687943"));
+	RottenTomatoesFromWebEtl o = new RottenTomatoesFromWebEtl(DaoUtility.getConnection(), 10);
+	RottenTomatoesEtlThread.printAttrsTree("", o.doEtlImpl("770687943"));
 	
     }
     

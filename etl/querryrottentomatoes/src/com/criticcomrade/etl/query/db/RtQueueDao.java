@@ -316,7 +316,7 @@ public class RtQueueDao extends AbstractDao {
 	    String sql = "select rt_id from rt_queue where date_locked is null and date_last_queried is not null and date_last_queried < ? order by date_last_queried asc limit 1";
 	    
 	    PreparedStatement statement = conn.prepareStatement(sql);
-	    statement.setDate(1, new java.sql.Date(stale.getTime()));
+	    statement.setTimestamp(1, new java.sql.Timestamp(stale.getTime()));
 	    ResultSet rs = statement.executeQuery();
 	    
 	    List<String> ret = new ArrayList<String>();
@@ -328,6 +328,39 @@ public class RtQueueDao extends AbstractDao {
 	    statement.close();
 	    
 	    return ret;
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
+    }
+    
+    public void setAsActive(String id) {
+	
+	try {
+	    
+	    String sql = "update rt_queue set date_last_found = ? where rt_id = ?";
+	    
+	    PreparedStatement statement = conn.prepareStatement(sql);
+	    statement.setTimestamp(1, new java.sql.Timestamp(new Date().getTime() - 1000 * 60 * 60 * 24));
+	    statement.setString(2, id);
+	    int changedCount = statement.executeUpdate();
+	    
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
+    }
+    
+    public boolean removeMovieFromQueue(String id) {
+	try {
+	    
+	    String sql = "delete from rt_queue where rt_id = ?";
+	    
+	    PreparedStatement statement = conn.prepareStatement(sql);
+	    statement.setString(1, id);
+	    
+	    int changedCount = statement.executeUpdate();
+	    
+	    return changedCount == 1;
+	    
 	} catch (SQLException e) {
 	    throw new RuntimeException(e);
 	}
