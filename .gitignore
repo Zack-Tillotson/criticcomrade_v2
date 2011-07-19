@@ -1,3 +1,4 @@
+*.swp
 .metadata/
 *.class
 bin/
