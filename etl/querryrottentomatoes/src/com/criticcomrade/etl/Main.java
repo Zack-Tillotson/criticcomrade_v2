@@ -70,9 +70,9 @@ public class Main extends Thread {
     
     private static int parseParameterInteger(Map<String, String> params, String paramName, int defaultValue) {
 	int ret;
-	if (params.containsKey(PARAM_NUM_THREADS)) {
+	if (params.containsKey(paramName)) {
 	    try {
-		ret = Integer.parseInt(params.get(PARAM_NUM_THREADS));
+		ret = Integer.parseInt(params.get(paramName));
 	    } catch (NumberFormatException e) {
 		printOptions("Unable to parse parameter value: " + paramName + " " + params.get(paramName));
 		throw e;

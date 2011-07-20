@@ -2,6 +2,7 @@ package com.criticcomrade.etl.query;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import com.criticcomrade.etl.data.*;
@@ -13,7 +14,7 @@ public abstract class RottenTomatoesEtlThread extends Thread {
     protected static final int ACTIVE_TIME_PERIOD_END = 1000 * 60 * 60 * 24; // 1 Day
     protected static final int STALE_TIME_PERIOD = 1000 * 60 * 60 * 24 * 30; // 1 Month
     protected static final int API_THROTTLE_PERIOD = 1000 * 60 * 60 * 24; // 1 Day
-    protected static final int API_THROTTLE_AMOUNT = 8000 + new Random().nextInt(1000); // Don't do more than 9000 calls a day
+    protected static final int API_THROTTLE_AMOUNT = 9500; // Don't do more than 9000 calls a day
     
     protected final Connection conn;
     protected final Date startWhen;
@@ -32,6 +33,8 @@ public abstract class RottenTomatoesEtlThread extends Thread {
     public void run() {
 	
 	try {
+	    System.out.println(String.format("%s Starting ETL [Current Run: %s, Running Until: %s]", new SimpleDateFormat().format(new Date()), currentRunName,
+		    new SimpleDateFormat().format(new Date().getTime() + maxRuntimeMins)));
 	    List<String> reasonsToQuit = new ArrayList<String>();
 	    String id = null;
 	    while (shouldContinueToEtl(reasonsToQuit) && ((id = getNextIdToEtl()) != null)) {
