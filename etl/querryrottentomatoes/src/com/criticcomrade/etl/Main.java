@@ -27,9 +27,6 @@ public class Main extends Thread {
 	
 	Map<String, String> params;
 	try {
-	    if (args.length < 1) {
-		throw new ParameterException("No parameters given");
-	    }
 	    params = buildParameterMap(args);
 	} catch (ParameterException e1) {
 	    printOptions(e1.toString());
@@ -90,26 +87,27 @@ public class Main extends Thread {
 	
 	Map<String, String> ret = new HashMap<String, String>();
 	
-	String name = null;
-	String value = null;
-	for (String arg : args) {
-	    if (arg.startsWith("--")) {
-		if (name != null) {
-		    ret.put(name, value);
-		    name = value = null;
+	if (args.length < 1) {
+	    throw new ParameterException("Too few parameters");
+	}
+	
+	if (Arrays.asList(CMD_CURRENT_LISTS, CMD_FROM_QUEUE, CMD_MOVE_RUNS, CMD_PRINT_OPTIONS, CMD_SCRAPE_REVIEWS).contains(args[0])) {
+	    ret.put(args[0], null);
+	}
+	
+	for (int i = 1; i < args.length; i++) {
+	    String arg = args[i];
+	    
+	    if (Arrays.asList(PARAM_MAX_RUNTIME, PARAM_NUM_THREADS).contains(arg)) { // Parameters expecting 1 argument
+		if (args.length < i + 1) {
+		    throw new ParameterException("Parameter " + arg + " expects an argument");
 		}
-		name = arg;
-	    } else {
-		if (name == null) {
-		    throw new ParameterException(String.format("Unexpected parameter: %s", arg));
-		}
-		value = arg;
+		ret.put(arg, args[++i]);
+	    } else { // Unexpected parameter
+		throw new ParameterException("Unexpected parameter " + arg);
 	    }
 	}
-	if (name != null) {
-	    ret.put(name, value);
-	    name = value = null;
-	}
+	
 	return ret;
 	
     }
@@ -118,7 +116,7 @@ public class Main extends Thread {
 	if (msg != null) {
 	    System.err.println("Error: " + msg);
 	}
-	System.err.println("Usage: <cmd> <command> [--num-threads <#>] [max run time]");
+	System.err.println("Usage: <cmd> <command> [" + PARAM_NUM_THREADS + " <#>] [" + PARAM_MAX_RUNTIME + " <#>]");
 	System.err.println("\t" + CMD_PRINT_OPTIONS + "\t\t\t\tPrint these options.");
 	System.err.println("\t" + CMD_CURRENT_LISTS + "\t\tEnsure the current box office, in theaters, opening, and upcoming movies " +
 	        "from RottenTomatoes are on the queue and active.");

@@ -16,7 +16,7 @@ public class RottenTomatoesFromWebEtl extends RottenTomatoesEtlThread {
     }
     
     @Override
-    protected boolean haveReasonToQuit() {
+    protected boolean haveReasonToQuit(List<String> reasons) {
 	return false;
     }
     

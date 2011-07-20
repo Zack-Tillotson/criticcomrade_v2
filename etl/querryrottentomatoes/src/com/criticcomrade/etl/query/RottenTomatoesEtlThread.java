@@ -32,21 +32,19 @@ public abstract class RottenTomatoesEtlThread extends Thread {
     public void run() {
 	
 	try {
+	    List<String> reasonsToQuit = new ArrayList<String>();
 	    String id = null;
-	    while (shouldContinueToEtl() && ((id = getNextIdToEtl()) != null)) {
+	    while (shouldContinueToEtl(reasonsToQuit) && ((id = getNextIdToEtl()) != null)) {
 		doEtlImpl(id);
 	    }
 	    if (id == null) {
 		System.out.println("No movies to ETL found. Exiting...");
 	    } else {
-		System.out.println("Failed conditions to continue ETL. Exiting...");
+		System.out.println("Failed conditions to continue ETL. " + reasonsToQuit.toString() + " Exiting...");
 	    }
 	} catch (IOException e) {
 	    e.printStackTrace();
-	} catch (AmbiguousQueryException e) {
-	    e.printStackTrace();
 	}
-	
     }
     
     /**
@@ -55,17 +53,29 @@ public abstract class RottenTomatoesEtlThread extends Thread {
      * @return
      * @throws AmbiguousQueryException
      */
-    private boolean shouldContinueToEtl() throws AmbiguousQueryException {
+    private boolean shouldContinueToEtl(List<String> reasons) {
 	
 	final Date nowWhen = new Date();
 	
-	boolean bossSaysStop = (new RtControllerDao(conn).getCurrentRunName()) != currentRunName;
-	boolean haveRunTooLong = (nowWhen.getTime() - startWhen.getTime()) >= maxRuntimeMins;
+	boolean bossSaysStop;
+	try {
+	    bossSaysStop = (new RtControllerDao(conn).getCurrentRunName()) != currentRunName;
+	} catch (AmbiguousQueryException e) {
+	    bossSaysStop = false;
+	}
+	if (bossSaysStop) {
+	    reasons.add("Boss said stop");
+	}
 	
-	return !bossSaysStop && !haveRunTooLong && !haveReasonToQuit();
+	boolean haveRunTooLong = (nowWhen.getTime() - startWhen.getTime()) >= maxRuntimeMins;
+	if (haveRunTooLong) {
+	    reasons.add("Past maximum runtime");
+	}
+	
+	return !bossSaysStop && !haveRunTooLong && !haveReasonToQuit(reasons);
     }
     
-    protected abstract boolean haveReasonToQuit();
+    protected abstract boolean haveReasonToQuit(List<String> reasons);
     
     /**
      * Will find the next id to etl

@@ -16,9 +16,13 @@ public class RottenTomatoesFromQueueEtl extends RottenTomatoesEtlThread {
     }
     
     @Override
-    protected boolean haveReasonToQuit() {
+    protected boolean haveReasonToQuit(List<String> reasons) {
 	final Date nowWhen = new Date();
-	return (new RtActivityDao(conn).getNumberOfApiCallsSince(new Date(nowWhen.getTime() - API_THROTTLE_PERIOD)) >= API_THROTTLE_AMOUNT);
+	boolean tooManyApiCalls = (new RtActivityDao(conn).getNumberOfApiCallsSince(new Date(nowWhen.getTime() - API_THROTTLE_PERIOD)) >= API_THROTTLE_AMOUNT);
+	if (tooManyApiCalls) {
+	    reasons.add("Too many API calls");
+	}
+	return tooManyApiCalls;
     }
     
     /**
