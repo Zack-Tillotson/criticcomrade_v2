@@ -75,7 +75,8 @@ public class RottenTomatoesFromWebEtl extends RottenTomatoesEtlThread {
 	    try {
 		
 		// Lookup the title
-		final DataItem movieDataItem = dataItemDao.findItemByAttributes(Arrays.asList(new Attribute(AttributeConstants.MOVIE_ID, id)));
+		final DataItem movieDataItem = dataItemDao.findItemByAttributes(Arrays.asList(new Attribute(AttributeConstants.TYPE, AttributeConstants.MOVIE),
+		        new Attribute(AttributeConstants.MOVIE_ID, id)));
 		if (movieDataItem == null) {
 		    result = "Movie item not yet querried";
 		} else {

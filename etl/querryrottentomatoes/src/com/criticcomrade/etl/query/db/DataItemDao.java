@@ -89,10 +89,35 @@ public class DataItemDao extends AbstractDao {
     
     private Integer findItemIdByAttributes(DataItem item) throws AmbiguousQueryException {
 	
+	List<Integer> ids = findItemIdsByAttributes(item.getAttributes());
+	
+	if (ids.size() == 1) {
+	    return ids.get(0).intValue();
+	} else if (ids.size() == 0) {
+	    return null;
+	} else {
+	    // TODO Manually figure out which is correct since multiple items can have same hash
+	    throw new AmbiguousQueryException(item.getAttributes().toString() + " => " + ids.toString());
+	}
+	
+    }
+    
+    private Collection<Attribute> buildKeysForDataItem(Collection<Attribute> attrs) throws AmbiguousQueryException {
+	
+	String type = null;
+	for (Attribute attr : attrs) {
+	    if (attr.attribute.equals(AttributeConstants.TYPE)) {
+		type = attr.value;
+	    }
+	}
+	if (type == null) {
+	    throw new AmbiguousQueryException("No type attribute specified for data item [" + attrs.toString() + "]");
+	}
+	
 	Collection<Attribute> keys = new ArrayList<Attribute>();
-	for (String keyName : AttributeConstants.getKeyAttributes().get(item.getType())) {
+	for (String keyName : AttributeConstants.getKeyAttributes().get(type)) {
 	    boolean found = false;
-	    for (Attribute attr : item.getAttributes()) {
+	    for (Attribute attr : attrs) {
 		if (keyName.equals(attr.attribute)) {
 		    keys.add(attr);
 		    found = true;
@@ -104,22 +129,12 @@ public class DataItemDao extends AbstractDao {
 	    }
 	}
 	
-	keys.add(new Attribute(AttributeConstants.TYPE, item.getType()));
-	
-	List<Integer> ids = findItemIdsByAttributes(keys);
-	
-	if (ids.size() == 1) {
-	    return ids.get(0).intValue();
-	} else if (ids.size() == 0) {
-	    return null;
-	} else {
-	    throw new AmbiguousQueryException(keys.toString() + " => " + ids.toString());
-	}
-	
+	keys.add(new Attribute(AttributeConstants.TYPE, type));
+	return keys;
     }
     
-    public DataItem findItemByAttributes(List<Attribute> keys) throws BadDataItemException {
-	Collection<DataItem> ret = findItemsByAttributes(keys);
+    public DataItem findItemByAttributes(List<Attribute> attrs) throws BadDataItemException {
+	Collection<DataItem> ret = findItemsByAttributes(attrs);
 	if (ret.size() > 0) {
 	    return ret.iterator().next();
 	} else {
@@ -127,11 +142,9 @@ public class DataItemDao extends AbstractDao {
 	}
     }
     
-    public Collection<DataItem> findItemsByAttributes(List<Attribute> keys) throws BadDataItemException {
+    public Collection<DataItem> findItemsByAttributes(List<Attribute> attrs) throws BadDataItemException {
 	
-	findItemIdsByAttributes(keys);
-	
-	List<Integer> ids = findItemIdsByAttributes(keys);
+	List<Integer> ids = findItemIdsByAttributes(attrs);
 	
 	// Load the data item for each item id
 	Collection<DataItem> ret = new ArrayList<DataItem>();
@@ -143,35 +156,16 @@ public class DataItemDao extends AbstractDao {
 	
     }
     
-    private List<Integer> findItemIdsByAttributes(Collection<Attribute> keys) {
+    private List<Integer> findItemIdsByAttributes(Collection<Attribute> attrs) {
+	
 	try {
 	    
-	    Collection<Attribute> posKeys = keys;
-	    Collection<Attribute> negKeys = new ArrayList<Attribute>();
-	    for (Iterator<Attribute> iter = posKeys.iterator(); iter.hasNext();) {
-		Attribute attr = iter.next();
-		if (attr.value == null) {
-		    negKeys.add(attr);
-		    iter.remove();
-		}
-	    }
+	    Collection<Attribute> keys = buildKeysForDataItem(attrs);
 	    
-	    List<String> values = new ArrayList<String>();
-	    String sql = "select item_id from (select item_id, count(*) cnt from (select item_id, attr_name from data where ";
-	    
-	    for (Attribute key : posKeys) {
-		sql = sql + "(attr_name = ? and attr_value = ?) or ";
-		values.add(key.attribute);
-		values.add(key.value);
-	    }
-	    
-	    sql = sql + " false) a group by item_id) b where cnt = ? order by 1 asc";
+	    String sql = "select item_id from item_queue where hash = ? order by 1 asc";
 	    
 	    PreparedStatement statement = conn.prepareStatement(sql);
-	    for (int i = 0; i < values.size(); i++) {
-		statement.setString(i + 1, values.get(i));
-	    }
-	    statement.setInt(values.size() + 1, posKeys.size());
+	    statement.setInt(1, keys.hashCode());
 	    
 	    List<Integer> ids = new ArrayList<Integer>();
 	    
@@ -182,44 +176,13 @@ public class DataItemDao extends AbstractDao {
 	    res.close();
 	    statement.close();
 	    
-	    if (!negKeys.isEmpty()) {
-		
-		// Reject any of these which have the negative (null) attributes
-		values.clear();
-		sql = "select item_id from (select item_id, count(*) cnt from (select item_id, attr_name from data where ";
-		
-		for (Attribute key : negKeys) {
-		    sql = sql + "(attr_name = ?) or ";
-		    values.add(key.attribute);
-		}
-		
-		sql = sql + " false) a group by item_id) b where cnt = ? order by 1 asc";
-		
-		statement = conn.prepareStatement(sql);
-		for (int i = 0; i < values.size(); i++) {
-		    statement.setString(i + 1, values.get(i));
-		}
-		statement.setInt(values.size() + 1, negKeys.size());
-		
-		List<Integer> negIds = new ArrayList<Integer>();
-		
-		res = statement.executeQuery();
-		while (res.next()) {
-		    negIds.add(res.getInt(1)); // Found the item
-		}
-		res.close();
-		statement.close();
-		
-		ids.removeAll(negIds);
-		
-	    }
-	    
 	    return ids;
 	    
 	} catch (SQLException e) {
 	    throw new RuntimeException(e);
+	} catch (AmbiguousQueryException e) {
+	    throw new RuntimeException(e);
 	}
-	
     }
     
     private Collection<Attribute> getItemAttrs(int id) {
@@ -369,6 +332,12 @@ public class DataItemDao extends AbstractDao {
 		    }
 		}
 		
+		try {
+		    refreshItemHash(id, attrs);
+		} catch (AmbiguousQueryException e) {
+		    throw new SQLException("Unable to build keys", e);
+		}
+		
 	    } catch (SQLException e) {
 		throw new RuntimeException(e);
 	    }
@@ -377,6 +346,29 @@ public class DataItemDao extends AbstractDao {
 	    
 	}
 	
+    }
+    
+    private void refreshItemHash(int id, Collection<Attribute> attrs) throws AmbiguousQueryException {
+	
+	Collection<Attribute> keys = buildKeysForDataItem(attrs);
+	
+	try {
+	    
+	    StringBuilder sql;
+	    PreparedStatement statement;
+	    
+	    sql = new StringBuilder("update item_queue set hash = ? where item_id = ?");
+	    
+	    statement = conn.prepareStatement(sql.toString());
+	    statement.setInt(1, keys.hashCode());
+	    statement.setInt(2, id);
+	    
+	    statement.executeUpdate();
+	    statement.close();
+	    
+	} catch (SQLException e) {
+	    throw new RuntimeException(e);
+	}
     }
     
     private void buildDbDifferencesLists(int id, Collection<Attribute> attrs, Collection<Attribute> toAdd, Collection<Attribute> toRemove) {
@@ -400,7 +392,7 @@ public class DataItemDao extends AbstractDao {
     private DataItem loadDataItem(int id) throws BadDataItemException {
 	
 	// Get attributes
-	Collection<Attribute> attrs = loadAttributes(id);
+	Collection<Attribute> attrs = loadAttributes(id, true);
 	
 	// Get subitems
 	Collection<DataItem> subItems = new ArrayList<DataItem>();
@@ -425,8 +417,19 @@ public class DataItemDao extends AbstractDao {
 	
     }
     
-    private Collection<Attribute> loadAttributes(int id) {
+    private Collection<Attribute> loadAttributes(int id, boolean sync) {
 	
+	if (sync) {
+	    synchronized (conn) {
+		return loadAttributesImpl(id);
+	    }
+	} else {
+	    return loadAttributesImpl(id);
+	}
+	
+    }
+    
+    private Collection<Attribute> loadAttributesImpl(int id) {
 	try {
 	    
 	    // Remove the old attrs
@@ -451,7 +454,6 @@ public class DataItemDao extends AbstractDao {
 	} catch (SQLException e) {
 	    throw new RuntimeException(e);
 	}
-	
     }
     
     public boolean setAttribute(int id, String name, String value) {
@@ -495,6 +497,12 @@ public class DataItemDao extends AbstractDao {
 		    
 		    statement.executeUpdate();
 		    statement.close();
+		    
+		    try {
+			refreshItemHash(id, loadAttributes(id, false));
+		    } catch (AmbiguousQueryException e) {
+			throw new RuntimeException("Unable to refresh hash");
+		    }
 		    
 		    return true;
 		    

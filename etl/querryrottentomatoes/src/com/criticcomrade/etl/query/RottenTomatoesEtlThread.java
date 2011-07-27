@@ -20,19 +20,24 @@ public abstract class RottenTomatoesEtlThread extends Thread {
     protected final Date startWhen;
     protected final int maxRuntimeMins;
     
-    private final int currentRunName;
+    private int currentRunName;
     
     public RottenTomatoesEtlThread(Connection conn, int maxRuntime) throws AmbiguousQueryException {
 	this.conn = conn;
 	startWhen = new Date();
 	maxRuntimeMins = maxRuntime * 1000 * 60;
-	currentRunName = new RtControllerDao(conn).getCurrentRunName();
     }
     
     @Override
     public void run() {
 	
 	try {
+	    try {
+		currentRunName = new RtControllerDao(conn).getCurrentRunName();
+	    } catch (AmbiguousQueryException e) {
+		System.out.println("Weird run name error");
+	    }
+	    
 	    System.out.println(String.format("%s Starting ETL [Current Run: %s, Running Until: %s]", new SimpleDateFormat().format(new Date()), currentRunName,
 		    new SimpleDateFormat().format(new Date().getTime() + maxRuntimeMins)));
 	    List<String> reasonsToQuit = new ArrayList<String>();

@@ -26,4 +26,9 @@ public class Attribute {
 	}
     }
     
+    @Override
+    public int hashCode() {
+	return ((((attribute == null ? 0 : attribute.hashCode()) + (value == null ? 0 : value.hashCode()))) % Integer.MAX_VALUE);
+    }
+    
 }

@@ -17,7 +17,8 @@ create table rt_queue (
 create table item_queue (
         item_id integer not null auto_increment,
         date_created timestamp not null,
-        date_pushed datetime,        
+        date_pushed datetime,
+        hash integer not null default value 0,
         --
         primary key(item_id)
 );

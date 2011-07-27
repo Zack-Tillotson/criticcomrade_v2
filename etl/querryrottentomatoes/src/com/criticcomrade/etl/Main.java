@@ -16,54 +16,74 @@ public class Main extends Thread {
     private static final String CMD_CURRENT_LISTS = "--from-current-lists";
     private static final String CMD_SCRAPE_REVIEWS = "--from-website";
     private static final String CMD_MOVE_RUNS = "--move-run";
+    private static final List<String> CMD_LIST = Arrays.asList(CMD_CURRENT_LISTS, CMD_FROM_QUEUE, CMD_MOVE_RUNS, CMD_PRINT_OPTIONS, CMD_SCRAPE_REVIEWS);
     
     private static final String PARAM_NUM_THREADS = "--threads";
     private static final String PARAM_MAX_RUNTIME = "--max-runtime";
+    private static final List<String> PARAM_LIST = Arrays.asList(PARAM_MAX_RUNTIME, PARAM_NUM_THREADS);
     
     private static Connection conn;
     
     public static void main(String[] args) throws JsonSyntaxException, IOException, SQLException, InterruptedException, ParameterException,
 	    AmbiguousQueryException {
 	
-	Map<String, String> params;
-	try {
-	    params = buildParameterMap(args);
-	} catch (ParameterException e1) {
-	    printOptions(e1.toString());
-	    throw e1;
-	}
+	List<String> argList = new ArrayList<String>();
+	Collections.addAll(argList, args);
 	
 	conn = DaoUtility.getConnection();
-	
-	Set<Thread> threads = new HashSet<Thread>();
-	
-	int numThreads = parseParameterInteger(params, PARAM_NUM_THREADS, 1);
-	int maxRuntime = parseParameterInteger(params, PARAM_MAX_RUNTIME, 60 * 24);
-	
-	if (args[0].equals(CMD_CURRENT_LISTS)) {
+	try {
 	    
-	    threads.add(new RottenTomatoesListsToQueue(conn));
+	    Set<Thread> threads = new HashSet<Thread>();
 	    
-	} else if (args[0].equals(CMD_FROM_QUEUE)) {
-	    for (int i = 0; i < numThreads; i++) {
-		threads.add(new RottenTomatoesFromQueueEtl(conn, maxRuntime));
+	    do {
+		
+		Map<String, String> params;
+		try {
+		    params = buildOneCommandParameterMap(argList);
+		} catch (ParameterException e1) {
+		    printOptions(e1.toString());
+		    throw e1;
+		}
+		
+		int numThreads = parseParameterInteger(params, PARAM_NUM_THREADS, 1);
+		int maxRuntime = parseParameterInteger(params, PARAM_MAX_RUNTIME, 60 * 24);
+		
+		if (params.keySet().contains(CMD_CURRENT_LISTS)) {
+		    
+		    threads.add(new RottenTomatoesListsToQueue(conn));
+		    
+		} else if (params.keySet().contains(CMD_FROM_QUEUE)) {
+		    for (int i = 0; i < numThreads; i++) {
+			threads.add(new RottenTomatoesFromQueueEtl(conn, maxRuntime));
+		    }
+		} else if (params.keySet().contains(CMD_SCRAPE_REVIEWS)) {
+		    for (int i = 0; i < numThreads; i++) {
+			threads.add(new RottenTomatoesFromWebEtl(conn, maxRuntime));
+		    }
+		} else if (params.keySet().contains(CMD_MOVE_RUNS)) {
+		    new RtControllerDao(conn).nextRun();
+		} else if (params.keySet().contains(CMD_PRINT_OPTIONS)) {
+		    printOptions(null);
+		    return;
+		} else {
+		    printOptions("Invalid option");
+		    System.exit(1);
+		}
+		
+		System.out.println(params.toString());
+		
+	    } while (argList.size() > 0);
+	    
+	    for (Thread thread : threads) {
+		thread.start();
 	    }
-	} else if (args[0].equals(CMD_SCRAPE_REVIEWS)) {
-	    for (int i = 0; i < numThreads; i++) {
-		threads.add(new RottenTomatoesFromWebEtl(conn, maxRuntime));
+	    
+	    for (Thread thread : threads) {
+		thread.join();
 	    }
-	} else if (args[0].equals(CMD_MOVE_RUNS)) {
-	    new RtControllerDao(conn).nextRun();
-	} else if (args[0].equals(CMD_PRINT_OPTIONS)) {
-	    printOptions(null);
-	    return;
-	} else {
-	    printOptions("Invalid option");
-	    System.exit(1);
-	}
-	
-	for (Thread thread : threads) {
-	    thread.start();
+	    
+	} finally {
+	    conn.close();
 	}
 	
     }
@@ -83,26 +103,26 @@ public class Main extends Thread {
 	return ret;
     }
     
-    private static Map<String, String> buildParameterMap(String[] args) throws ParameterException {
+    private static Map<String, String> buildOneCommandParameterMap(List<String> args) throws ParameterException {
 	
 	Map<String, String> ret = new HashMap<String, String>();
 	
-	if (args.length < 1) {
+	if (args.size() < 1) {
 	    throw new ParameterException("Too few parameters");
 	}
 	
-	if (Arrays.asList(CMD_CURRENT_LISTS, CMD_FROM_QUEUE, CMD_MOVE_RUNS, CMD_PRINT_OPTIONS, CMD_SCRAPE_REVIEWS).contains(args[0])) {
-	    ret.put(args[0], null);
+	if (CMD_LIST.contains(args.get(0))) {
+	    ret.put(args.remove(0), null);
 	}
 	
-	for (int i = 1; i < args.length; i++) {
-	    String arg = args[i];
+	while ((args.size() > 0) && !CMD_LIST.contains(args.get(0))) {
+	    String arg = args.remove(0);
 	    
-	    if (Arrays.asList(PARAM_MAX_RUNTIME, PARAM_NUM_THREADS).contains(arg)) { // Parameters expecting 1 argument
-		if (args.length < i + 1) {
+	    if (PARAM_LIST.contains(arg)) { // Parameters expecting 1 argument
+		if (args.size() < 1) {
 		    throw new ParameterException("Parameter " + arg + " expects an argument");
 		}
-		ret.put(arg, args[++i]);
+		ret.put(arg, args.remove(0));
 	    } else { // Unexpected parameter
 		throw new ParameterException("Unexpected parameter " + arg);
 	    }
@@ -116,13 +136,14 @@ public class Main extends Thread {
 	if (msg != null) {
 	    System.err.println("Error: " + msg);
 	}
-	System.err.println("Usage: <cmd> <command> [" + PARAM_NUM_THREADS + " <#>] [" + PARAM_MAX_RUNTIME + " <#>]");
-	System.err.println("\t" + CMD_PRINT_OPTIONS + "\t\t\t\tPrint these options.");
+	System.err.println("Usage: <command> [" + PARAM_NUM_THREADS + " <#>] [" + PARAM_MAX_RUNTIME + " <#>] [<command>...]");
+	System.err.println("\t" + CMD_PRINT_OPTIONS + "\t\t\t\tPrint these options and quit.");
 	System.err.println("\t" + CMD_CURRENT_LISTS + "\t\tEnsure the current box office, in theaters, opening, and upcoming movies " +
 	        "from RottenTomatoes are on the queue and active.");
 	System.err.println("\t" + CMD_FROM_QUEUE + "\tETL movies from the queue.");
-	System.err.println("\t" + CMD_MOVE_RUNS +
-	        "\tChange what the current run is considered to be. Will make all current runs stop after their current movie.");
+	System.err
+	        .println("\t" + CMD_MOVE_RUNS + "\tChange what the current run is considered to be (before running other commands). " +
+	                "Will make all current runs stop after their current movie.");
 	System.err.println("\t" + CMD_SCRAPE_REVIEWS + "\tScrape rottentomatoes.com for review information.");
     }
     
