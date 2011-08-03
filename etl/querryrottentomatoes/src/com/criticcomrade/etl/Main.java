@@ -6,7 +6,6 @@ import java.util.*;
 
 import com.criticcomrade.etl.query.*;
 import com.criticcomrade.etl.query.db.*;
-import com.criticcomrade.etl.scrape.RottenTomatoesFromWebEtl;
 import com.google.gson.JsonSyntaxException;
 
 public class Main extends Thread {
@@ -14,9 +13,8 @@ public class Main extends Thread {
     private static final String CMD_PRINT_OPTIONS = "-?";
     private static final String CMD_FROM_QUEUE = "--from-queue";
     private static final String CMD_CURRENT_LISTS = "--from-current-lists";
-    private static final String CMD_SCRAPE_REVIEWS = "--from-website";
     private static final String CMD_MOVE_RUNS = "--move-run";
-    private static final List<String> CMD_LIST = Arrays.asList(CMD_CURRENT_LISTS, CMD_FROM_QUEUE, CMD_MOVE_RUNS, CMD_PRINT_OPTIONS, CMD_SCRAPE_REVIEWS);
+    private static final List<String> CMD_LIST = Arrays.asList(CMD_CURRENT_LISTS, CMD_FROM_QUEUE, CMD_MOVE_RUNS, CMD_PRINT_OPTIONS);
     
     private static final String PARAM_NUM_THREADS = "--threads";
     private static final String PARAM_MAX_RUNTIME = "--max-runtime";
@@ -55,10 +53,6 @@ public class Main extends Thread {
 		} else if (params.keySet().contains(CMD_FROM_QUEUE)) {
 		    for (int i = 0; i < numThreads; i++) {
 			threads.add(new RottenTomatoesFromQueueEtl(conn, maxRuntime));
-		    }
-		} else if (params.keySet().contains(CMD_SCRAPE_REVIEWS)) {
-		    for (int i = 0; i < numThreads; i++) {
-			threads.add(new RottenTomatoesFromWebEtl(conn, maxRuntime));
 		    }
 		} else if (params.keySet().contains(CMD_MOVE_RUNS)) {
 		    new RtControllerDao(conn).nextRun();
@@ -144,7 +138,6 @@ public class Main extends Thread {
 	System.err
 	        .println("\t" + CMD_MOVE_RUNS + "\tChange what the current run is considered to be (before running other commands). " +
 	                "Will make all current runs stop after their current movie.");
-	System.err.println("\t" + CMD_SCRAPE_REVIEWS + "\tScrape rottentomatoes.com for review information.");
     }
     
 }

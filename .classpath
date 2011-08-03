@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="etl/LoadHistoricalMovieTitles/src"/>
+	<classpathentry kind="src" path="etl/querryrottentomatoes/src"/>
+	<classpathentry kind="lib" path="etl/LoadHistoricalMovieTitles/lib/gson-1.7.1-javadoc.jar"/>
+	<classpathentry kind="lib" path="etl/LoadHistoricalMovieTitles/lib/gson-1.7.1-sources.jar"/>
+	<classpathentry kind="lib" path="etl/LoadHistoricalMovieTitles/lib/gson-1.7.1.jar"/>
+	<classpathentry kind="lib" path="etl/querryrottentomatoes/lib/mysql-connector-java-5.1.16-bin.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/rtapi"/>
+	<classpathentry kind="output" path="etl/LoadHistoricalMovieTitles/bin"/>
+</classpath>

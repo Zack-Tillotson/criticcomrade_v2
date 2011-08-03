@@ -156,6 +156,9 @@ public class RottenTomatoesMovieQuery extends DataItem {
 		    attrs.add(new Attribute(AttributeConstants.REVIEW_ORIGINAL_SCORE, review.original_score));
 		    attrs.add(new Attribute(AttributeConstants.REVIEW_QUOTE, review.quote));
 		    attrs.add(new Attribute(AttributeConstants.REVIEW_LINK, review.links.review));
+		    if (review.freshness != null) {
+			attrs.add(new Attribute(AttributeConstants.REVIEW_IS_POSITIVE, review.freshness.equals("fresh") ? "TRUE" : "FALSE"));
+		    }
 		    return attrs;
 		}
 		
