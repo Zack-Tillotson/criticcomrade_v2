@@ -26,6 +26,8 @@ create table item_queue (
         primary key(item_id)
 );
 
+create index item_queue_hash on item_queue(hash) using hash;
+
 create table data (
         item_id int not null,
         attr_name char(255) not null,
@@ -34,6 +36,9 @@ create table data (
         --
         foreign key (item_id) references item_queue(item_id)
 );
+
+create index data_value on data(attr_value(20)) using btree;
+create index data_name on data(attr_name(20)) using btree;
 
 create table rt_activity (
 	rt_id int not null,
