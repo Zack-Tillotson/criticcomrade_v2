@@ -18,8 +18,10 @@ public class Main extends Thread {
     
     private static final String PARAM_NUM_THREADS = "--threads";
     private static final String PARAM_MAX_RUNTIME = "--max-runtime";
+    private static final List<String> ONE_ARG_PARAM_LIST = Arrays.asList(PARAM_MAX_RUNTIME, PARAM_NUM_THREADS);
+    
     private static final String PARAM_NO_UPDATE = "--no-update";
-    private static final List<String> PARAM_LIST = Arrays.asList(PARAM_MAX_RUNTIME, PARAM_NUM_THREADS, PARAM_NO_UPDATE);
+    private static final List<String> NO_ARG_PARAM_LIST = Arrays.asList(PARAM_NO_UPDATE);
     
     private static Connection conn;
     
@@ -117,7 +119,9 @@ public class Main extends Thread {
 	while ((args.size() > 0) && !CMD_LIST.contains(args.get(0))) {
 	    String arg = args.remove(0);
 	    
-	    if (PARAM_LIST.contains(arg)) { // Parameters expecting 1 argument
+	    if (NO_ARG_PARAM_LIST.contains(arg)) { // Parameters expecting 0 argument
+		ret.put(arg, null);
+	    } else if (ONE_ARG_PARAM_LIST.contains(arg)) { // Parameters expecting 1 argument
 		if (args.size() < 1) {
 		    throw new ParameterException("Parameter " + arg + " expects an argument");
 		}
