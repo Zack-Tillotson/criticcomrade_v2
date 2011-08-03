@@ -18,7 +18,8 @@ public class Main extends Thread {
     
     private static final String PARAM_NUM_THREADS = "--threads";
     private static final String PARAM_MAX_RUNTIME = "--max-runtime";
-    private static final List<String> PARAM_LIST = Arrays.asList(PARAM_MAX_RUNTIME, PARAM_NUM_THREADS);
+    private static final String PARAM_NO_UPDATE = "--no-update";
+    private static final List<String> PARAM_LIST = Arrays.asList(PARAM_MAX_RUNTIME, PARAM_NUM_THREADS, PARAM_NO_UPDATE);
     
     private static Connection conn;
     
@@ -51,8 +52,12 @@ public class Main extends Thread {
 		    threads.add(new RottenTomatoesListsToQueue(conn));
 		    
 		} else if (params.keySet().contains(CMD_FROM_QUEUE)) {
+		    boolean noUpdate = false;
+		    if (params.containsKey(PARAM_NO_UPDATE)) {
+			noUpdate = true;
+		    }
 		    for (int i = 0; i < numThreads; i++) {
-			threads.add(new RottenTomatoesFromQueueEtl(conn, maxRuntime));
+			threads.add(new RottenTomatoesFromQueueEtl(conn, maxRuntime, noUpdate));
 		    }
 		} else if (params.keySet().contains(CMD_MOVE_RUNS)) {
 		    new RtControllerDao(conn).nextRun();
@@ -130,7 +135,7 @@ public class Main extends Thread {
 	if (msg != null) {
 	    System.err.println("Error: " + msg);
 	}
-	System.err.println("Usage: <command> [" + PARAM_NUM_THREADS + " <#>] [" + PARAM_MAX_RUNTIME + " <#>] [<command>...]");
+	System.err.println("Usage: <command> [" + PARAM_NUM_THREADS + " <#>] [" + PARAM_MAX_RUNTIME + " <#>] [" + PARAM_NO_UPDATE + "] [<command>...]");
 	System.err.println("\t" + CMD_PRINT_OPTIONS + "\t\t\t\tPrint these options and quit.");
 	System.err.println("\t" + CMD_CURRENT_LISTS + "\t\tEnsure the current box office, in theaters, opening, and upcoming movies " +
 	        "from RottenTomatoes are on the queue and active.");

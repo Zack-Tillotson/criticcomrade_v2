@@ -12,8 +12,11 @@ import com.criticcomrade.etl.query.db.*;
 
 public class RottenTomatoesFromQueueEtl extends RottenTomatoesEtlThread {
     
-    public RottenTomatoesFromQueueEtl(Connection conn, int maxRuntime) throws AmbiguousQueryException {
+    private final boolean noUpdates;
+    
+    public RottenTomatoesFromQueueEtl(Connection conn, int maxRuntime, boolean noUpdates) throws AmbiguousQueryException {
 	super(conn, maxRuntime);
+	this.noUpdates = noUpdates;
     }
     
     @Override
@@ -42,11 +45,15 @@ public class RottenTomatoesFromQueueEtl extends RottenTomatoesEtlThread {
 	
 	/////////////////
 	
-	List<String> activeMovies = rtQueueDao.getMovieActiveWithinTimePeriod(new Date((new Date()).getTime() - ACTIVE_TIME_PERIOD_START),
-	                new Date((new Date()).getTime() - ACTIVE_TIME_PERIOD_END));
-	
-	if (activeMovies.size() > 0) {
-	    return activeMovies.get(0);
+	if (!noUpdates) {
+	    
+	    List<String> activeMovies = rtQueueDao.getMovieActiveWithinTimePeriod(new Date((new Date()).getTime() - ACTIVE_TIME_PERIOD_START),
+		        new Date((new Date()).getTime() - ACTIVE_TIME_PERIOD_END));
+	    
+	    if (activeMovies.size() > 0) {
+		return activeMovies.get(0);
+	    }
+	    
 	}
 	
 	/////////////////
@@ -58,12 +65,6 @@ public class RottenTomatoesFromQueueEtl extends RottenTomatoesEtlThread {
 	}
 	
 	/////////////////
-	
-	List<String> staleMovies = rtQueueDao.getMovieIsStale(new Date((new Date()).getTime() - STALE_TIME_PERIOD));
-	
-	if (staleMovies.size() > 0) {
-	    return staleMovies.get(0);
-	}
 	
 	return null;
 	
@@ -126,7 +127,7 @@ public class RottenTomatoesFromQueueEtl extends RottenTomatoesEtlThread {
     
     public static void main(String args[]) throws SQLException, IOException, AmbiguousQueryException {
 	
-	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection(), 1000 * 60 * 10);
+	RottenTomatoesFromQueueEtl o = new RottenTomatoesFromQueueEtl(DaoUtility.getConnection(), 1000 * 60 * 10, false);
 	RottenTomatoesEtlThread.printAttrsTree("", o.doEtlImpl("770687943"));
 	
     }
