@@ -17,7 +17,7 @@ public class DaoUtility {
 	try {
 	    in = new Scanner(new File("db.properties"));
 	} catch (FileNotFoundException e) {
-	    e.printStackTrace();
+	    throw new RuntimeException("Unable to find db.properties file, expecting it at " + System.getProperty("user.dir") + "\\");
 	}
 	
 	Map<String, String> props = new HashMap<String, String>();
