@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 
+import com.criticcomrade.etl.RottenTomatoesEtlThread;
 import com.criticcomrade.etl.data.DataItem;
 import com.criticcomrade.etl.query.db.*;
 
