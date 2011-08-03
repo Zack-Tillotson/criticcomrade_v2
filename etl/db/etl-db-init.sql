@@ -3,6 +3,9 @@
 -- rt_queue: List of movies to be querried about in rottentomatoes.com
 -- item_queue: Movies, Critics, and Reviews which have information and are ready to be transfered to the normal db
 -- data: Attribute name, value pair table for the queue objects
+-- rt_activity: Record of rottentomatoes api calls
+-- etl_controller: Simple record of etl runs, a run will remember the run id of when it started, and quits
+ 	when that has changed. So by inserting a new row old etls will stop gracefully.
 create table rt_queue (
         rt_id integer not null,
         link text not null,
@@ -37,16 +40,6 @@ create table rt_activity (
 	ts timestamp not null,
 	status text not null,
 	estimated_api_calls int not null,
-	etl_duration_seconds int not null,
-	--
-        foreign key (rt_id) references rt_queue(rt_id)
-);
-
-create table rt_scrape_activity (
-	rt_id int not null,
-	ts timestamp not null,
-	status text not null,
-	estimated_web_calls int not null,
 	etl_duration_seconds int not null,
 	--
         foreign key (rt_id) references rt_queue(rt_id)
