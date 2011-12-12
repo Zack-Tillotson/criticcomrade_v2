@@ -19,7 +19,7 @@ create table rt_queue (
 
 create table item_queue (
         item_id integer not null auto_increment,
-        date_created timestamp not null,
+        date_created timestamp not null default CURRENT_TIMESTAMP,
         date_pushed datetime,
         hash integer not null default value 0,
         --
@@ -32,7 +32,8 @@ create table data (
         item_id int not null,
         attr_name char(255) not null,
         attr_value text,
-        date_entered timestamp,
+        date_entered timestamp default CURRENT_TIMESTAMP,
+        date_pushed datetime,
         --
         foreign key (item_id) references item_queue(item_id)
 );

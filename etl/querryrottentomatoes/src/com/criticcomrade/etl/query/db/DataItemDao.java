@@ -7,7 +7,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.criticcomrade.etl.data.Attribute;
 import com.criticcomrade.etl.data.DataItem;
@@ -631,21 +633,60 @@ public class DataItemDao extends AbstractDao {
     public List<String> getPushedMoviesWithChanges() {
         try {
 
-            // TODO FIX
-            final String sql = "select * from (select item_id from data where attr_name = 'TYPE' and attr_value = 'MOVIE' and date_pushed is not null) pushed_movies, (select item_id, attr_name, attr_value from data where date_pushed is not null and date_pushed < date_entered) changed_attrs, data items where pushed_movies.item_id = changed_attrs.item_id and items.item_id = changed_attrs.item_id";
+            // Get items which have changed
+            String sql = "select items.item_id, items.attr_value from "
+                    + "(select item_id, attr_name, attr_value from data where date_pushed is not null and date_pushed < date_entered) changed_attrs, "
+                    + "data items where items.item_id = changed_attrs.item_id and items.attr_name = 'TYPE'";
 
             PreparedStatement statement = conn.prepareStatement(sql);
             ResultSet rs = statement.executeQuery();
 
-            List<String> ret = new ArrayList<String>();
-            while (rs.next()) {
-                // TODO ret.add(rs.getString(1));
-            }
+            Set<String> ret = new HashSet<String>();
+            Set<String> itemsYetToQuery = new HashSet<String>();
 
-            rs.close();
-            statement.close();
+            do {
 
-            return ret;
+                itemsYetToQuery.clear();
+
+                while (rs.next()) {
+
+                    String id = rs.getString(1);
+                    String type = rs.getString(2);
+
+                    if (type.equals(AttributeConstants.MOVIE)) {
+                        ret.add(id);
+                    } else {
+                        itemsYetToQuery.add(id);
+                    }
+
+                }
+
+                rs.close();
+                statement.close();
+
+                if (itemsYetToQuery.size() == 0) {
+                    break;
+                } else {
+
+                    StringBuilder itemsNotMovies = new StringBuilder();
+                    int i = 0;
+                    for (String item : itemsYetToQuery) {
+                        itemsNotMovies = itemsNotMovies.append(item).append(", ");
+                        if (i++ > 500)
+                            break;
+                    }
+                    itemsNotMovies.setLength(itemsNotMovies.length() - 2);
+
+                    sql = "select b.item_id, b.attr_value from " + "(select * from data where attr_value in ("
+                            + itemsNotMovies + ")) a, data b where a.item_id = b.item_id and b.attr_name = 'TYPE'";
+                    statement = conn.prepareStatement(sql);
+                    rs = statement.executeQuery();
+
+                }
+
+            } while (true);
+
+            return new ArrayList<String>(ret);
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -688,7 +729,7 @@ public class DataItemDao extends AbstractDao {
             String sql = "update data set date_pushed = ? where item_id in (" + ids + ")";
 
             PreparedStatement statement = conn.prepareStatement(sql);
-            statement.setTimestamp(1, new java.sql.Timestamp(new Date().getTime() - 1000 * 60 * 60 * 24));
+            statement.setTimestamp(1, new java.sql.Timestamp(when.getTime()));
             int changedCount = statement.executeUpdate();
 
             statement.close();
@@ -702,7 +743,7 @@ public class DataItemDao extends AbstractDao {
             String sql = "update item_queue set date_pushed = ? where item_id in (" + ids + ")";
 
             PreparedStatement statement = conn.prepareStatement(sql);
-            statement.setTimestamp(1, new java.sql.Timestamp(new Date().getTime() - 1000 * 60 * 60 * 24));
+            statement.setTimestamp(1, new java.sql.Timestamp(when.getTime()));
             int changedCount = statement.executeUpdate();
 
             statement.close();
