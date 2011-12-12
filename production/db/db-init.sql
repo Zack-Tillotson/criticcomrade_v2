@@ -23,6 +23,7 @@ create table cc_review (
 	,link text
 	,original_score text
 	,date datetime not null
+	,quote text
 	,mid int not null
 	,cid int not null
 	---------------------------
