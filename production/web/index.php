@@ -21,7 +21,7 @@ include_once('functions.php');
 
 // Get the list of movies to rate
 $movies = get_movies();
-//$critics = get_critics();
+$critics = get_critics();
 
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -43,14 +43,15 @@ foreach($movies as $movie) {
 ?>
 					<tr>
 						<td>
-							<input type="hidden" name="mid-<?php print $i++; ?>" value="<?php print $movie->get_id(); ?>" />
+							<input type="hidden" name="mid-<?php print $i; ?>" value="<?php print $movie->get_id(); ?>" />
 							<?php print $movie->get_title(); ?>
 						</td>
 						<td><img src="<?php print $movie->get_poster(); ?>" width="50" /></td>
-						<td><input type="radio" name="plus-minus" value="plus">+</input></td>
-						<td><input type="radio" name="plus-minus" value="minus">-</input></td>
+						<td><input type="radio" name="is_positive-<?php print $i; ?>" value="true">+</input></td>
+						<td><input type="radio" name="is_positive-<?php print $i; ?>" value="false">-</input></td>
 					</tr>
 <?php
+	$i++;
 }
 ?>
 				</table>
@@ -58,6 +59,28 @@ foreach($movies as $movie) {
 			</form>
 		</div>
 		<div id="section-critics">
+			<table>
+				<tr>
+					<td>Rank</td>
+					<td>Name</td>
+					<td>Publisher</td>
+					<td>Agree On</td>
+					<td>Of A Possible</td>
+				</tr>	
+<?php
+foreach($critics as $critic) {
+?>
+				<tr>
+					<td><?php print $critic->rank; ?></td>
+					<td><?php print $critic->name; ?></td>
+					<td><?php print $critic->publisher; ?></td>
+					<td><?php print $critic->same_count; ?></td>
+					<td><?php print $critic->tot_count; ?></td>
+				</tr>	
+<?php
+}
+?>
+			</table>
 		</div>
 	</body>
 </html>

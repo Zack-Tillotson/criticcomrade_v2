@@ -2,7 +2,28 @@
 
 include_once('functions.php');
 
-// TODO work
+$reviews = array();
+for($i = 0 ; $i < 25; $i++) {
+
+	if(!isset($_POST["is_positive-$i"])) {
+		continue;
+	}
+
+	$found_one = true;
+
+	$mid = $_POST["mid-$i"];
+	$sid = session_id();
+	$is_positive = strcmp($_POST["is_positive-$i"], "true") == 0 ? "true" : "false";
+
+	$reviews[] = array($mid, $sid, $is_positive);
+
+}
+
+if(count($reviews) > 0) {
+
+	add_user_reviews($reviews);
+
+}
 
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">

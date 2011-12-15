@@ -34,9 +34,13 @@ create table cc_review (
 create table cc_user_review (
 	rid int primary key auto_increment
 	,is_positive bool not null
-	,date timestamp not null
+	,link text
+	,original_score text
+	,date datetime not null
+	,quote text
 	,mid int not null
-	,sid text not null
+	,cid int not null
 	---------------------------
 	,foreign key(mid) references cc_movie(mid)
+	,foreign key(rid) references cc_critic(cid)
 );
