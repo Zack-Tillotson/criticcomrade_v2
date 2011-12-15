@@ -1,6 +1,6 @@
 <?php
 
-include 'functions.php';
+include_once('functions.php');
 
 // Iteration 1
 
@@ -20,29 +20,33 @@ include 'functions.php';
 	// Results
 
 // Get the list of movies to rate
-//$movies = getMovies();
-//$critics = getCritics();
+$movies = get_movies();
+//$critics = get_critics();
 
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 	<head>
-		<title>Critic Critic - Critics have lots of opinions, who agrees with YOUR opinion?</title>
+		<title>Critic Critic - Every critics has a different opinion, who agrees with YOUR opinion?</title>
 	</head>
 	<body>
 		<div id="section-title">
 			<h1>Critic Critic</h1>
-			<span>Critics have lots of opinions, who agrees with YOUR opinion?</span>
+			<span>Every critics has a different opinion, who agrees with YOUR opinion?</span>
 		</div>
 		<div id="section-rate">
-			<form name="input" action="index.php" method="post">
+			<form name="input" action="form.php" method="post">
 				<table>
 <?php
+$i=0;
 foreach($movies as $movie) {
 ?>
 					<tr>
-						<td><?php print $movie->title; ?></td>
-						<td><?php print $movie->poster; ?></td>
+						<td>
+							<input type="hidden" name="mid-<?php print $i++; ?>" value="<?php print $movie->get_id(); ?>" />
+							<?php print $movie->get_title(); ?>
+						</td>
+						<td><img src="<?php print $movie->get_poster(); ?>" width="50" /></td>
 						<td><input type="radio" name="plus-minus" value="plus">+</input></td>
 						<td><input type="radio" name="plus-minus" value="minus">-</input></td>
 					</tr>
