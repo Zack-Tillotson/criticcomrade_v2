@@ -26,6 +26,8 @@ class Movie {
 	private $poster;
 	
 	public function __construct($id, $title, $poster) {
+		$poster = preg_replace('/_ori/', '_mob', $poster);
+
 		$this->id = $id;
 		$this->title = $title;
 		$this->poster = $poster;
