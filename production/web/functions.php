@@ -49,7 +49,7 @@ class Movie {
 function get_critics() {
 
 	
-	$query = "select c.name, c.publication, same_count, tot_count from cc_critic c, (select r.cid, sum(if(r.is_positive = u.is_positive, 1, 0)) same_count, count(*) tot_count from cc_review r, cc_user_review u where r.mid = u.mid and u.sid = '?' group by r.cid) a where a.cid = c.cid order by tot_count desc, same_count desc limit 100";
+	$query = "select c.name, c.publication, same_count, tot_count from cc_critic c, (select r.cid, sum(if(r.is_positive = u.is_positive, 1, 0)) same_count, count(*) tot_count from cc_review r, cc_user_review u where r.mid = u.mid and u.sid = '?' group by r.cid) a where a.cid = c.cid order by same_count desc, tot_count asc limit 100";
 
 	$query = str_replace_once("?", mysql_real_escape_string(session_id()), $query);
 	$result = mysql_query($query) or die('Query failed: ' . mysql_error());
