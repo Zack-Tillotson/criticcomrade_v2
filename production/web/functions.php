@@ -6,7 +6,7 @@ include_once("db.properties");
 
 function get_movies() {
 
-	$query = 'select * from (select m.mid, m.title, m.poster_link, count(*) cnt FROM cc_movie m, cc_review r where m.mid = r.mid group by m.mid, m.title, m.poster_link) a order by cnt desc limit 25';
+	$query = 'select * from (select m.mid, m.title, m.poster_link, count(*) cnt FROM cc_movie m, cc_review r where m.mid = r.mid group by m.mid, m.title, m.poster_link) a order by cnt desc limit 50';
 	$result = mysql_query($query) or die('Query failed: ' . mysql_error());
 	 
 	$ret = array();

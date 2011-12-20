@@ -78,6 +78,7 @@ $critics = get_critics();
 				background: #a1cd63;
 				padding: 10px;
 				font-size: 20px;
+				clear: both;
 			}
 
 		</style>
